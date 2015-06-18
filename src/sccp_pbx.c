@@ -674,6 +674,7 @@ uint8_t sccp_pbx_channel_allocate(sccp_channel_t * channel, const void *ids, con
 	memcpy(&c->capabilities.video, &l->combined_capabilities.video, sizeof(c->capabilities.video));
 	memcpy(&c->preferences.audio , &l->reduced_preferences.audio , sizeof(c->preferences.audio ));
 	memcpy(&c->preferences.video , &l->reduced_preferences.video , sizeof(c->preferences.video ));
+
 	sccp_log((DEBUGCAT_PBX + DEBUGCAT_CHANNEL)) (VERBOSE_PREFIX_3 "SCCP:              cid_num: \"%s\"\n", c->callInfo.callingPartyNumber);
 	sccp_log((DEBUGCAT_PBX + DEBUGCAT_CHANNEL)) (VERBOSE_PREFIX_3 "SCCP:             cid_name: \"%s\"\n", c->callInfo.callingPartyName);
 	sccp_log((DEBUGCAT_PBX + DEBUGCAT_CHANNEL)) (VERBOSE_PREFIX_3 "SCCP:          accountcode: \"%s\"\n", l->accountcode);
