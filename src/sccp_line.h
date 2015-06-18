@@ -90,6 +90,19 @@ struct sccp_line {
 		int oldmsgs;											/*!< Old Messages */
 	} voicemailStatistic;											/*!< VoiceMail Statistics Structure */
 
+ 	struct {
+		skinny_codec_t audio[SKINNY_MAX_CAPABILITIES];							/*!< SCCP Audio Codec Capabilities */
+		skinny_codec_t video[SKINNY_MAX_CAPABILITIES];							/*!< SCCP Video Codec Capabilities */
+	} combined_capabilities;										/*!< Combined Capabilities of a Shared Line Participants */
+
+	struct {
+		skinny_codec_t audio[SKINNY_MAX_CAPABILITIES];							/*!< SCCP Audio Codec Preferences */
+		skinny_codec_t video[SKINNY_MAX_CAPABILITIES];							/*!< SCCP Video Codec Preferences */
+	} reduced_preferences;											/*!< Will eventually take over the role from device->preferences
+														     For now it will either be automatically build based on reduced d->preferences of all shared line participants,
+														     Or be user defined in sccp.conf per line */
+	boolean_t reduced_preferences_auto_generated;								/*!< Temporary Variable to distinguish source of l->preferences */
+
 	char pin[SCCP_MAX_LINE_PIN];										/*!< PIN number for mobility/roaming. */
 	char *adhocNumber;											/*!< number that should be dialed when device offhocks this line */
 	char *regexten;												/*!< Extension for auto-extension (DUNDI) */
@@ -154,6 +167,7 @@ void sccp_line_kill_channels(sccp_line_t * l);
 sccp_channelstate_t sccp_line_getDNDChannelState(sccp_line_t * line);
 void sccp_line_copyCodecSetsFromLineToChannel(sccp_line_t *l, sccp_channel_t *c);
 void sccp_line_cfwd(sccp_line_t * l, sccp_device_t * device, sccp_callforward_t type, char *number);
+void sccp_line_copyCapabilitiesFromDeviceToLine(sccp_line_t *l, sccp_device_t *d, int shared);
 
 // find line
 sccp_line_t *sccp_line_find_byname(const char *name, uint8_t realtime);
