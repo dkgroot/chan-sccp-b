@@ -25,6 +25,12 @@
 #define sccp_vasprintf ast_vasprintf
 #define sccp_calloc_cache ast_calloc_cache
 #define sccp_alloca(size) __builtin_alloca(size)
+#if ASTERISK_VERSION_GROUP < 111
+	#define ast_std_calloc ast_calloc
+	#define ast_std_free ast_free
+	#define ast_std_malloc ast_malloc
+	#define ast_std_realloc ast_realloc
+#endif	
 #define CS_BRIDGEPEERNAME "BRIDGEPEER"
 
 // codec / format redefinitions

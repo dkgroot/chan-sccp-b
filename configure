@@ -22200,7 +22200,6 @@ else
 fi
 
 
-CS_CHECK_LIBBFD
 
 
 # Check whether --with-changelog-oldest was given.
