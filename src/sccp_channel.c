@@ -301,13 +301,17 @@ void sccp_channel_setDevice(sccp_channel_t * channel, const sccp_device_t * devi
 	if (channel->privateData && channel->privateData->device) {
 		memcpy(&channel->preferences.audio, &channel->privateData->device->preferences.audio, sizeof(channel->preferences.audio));
 		memcpy(&channel->capabilities.audio, &channel->privateData->device->capabilities.audio, sizeof(channel->capabilities.audio));
+		memcpy(&channel->preferences.video, &channel->privateData->device->preferences.video, sizeof(channel->preferences.video));
+		memcpy(&channel->capabilities.video, &channel->privateData->device->capabilities.video, sizeof(channel->capabilities.video));
 		sccp_copy_string(channel->currentDeviceId, channel->privateData->device->id, sizeof(char[StationMaxDeviceNameSize]));
 		channel->dtmfmode = channel->privateData->device->getDtmfMode(channel->privateData->device);
 		return;
 	}
 	/* \todo instead of copying caps / prefs from global */
-	memcpy(&channel->preferences.audio, &GLOB(global_preferences), sizeof(channel->preferences.audio));
-	memcpy(&channel->capabilities.audio, &GLOB(global_preferences), sizeof(channel->capabilities.audio));
+	memcpy(&channel->preferences.audio, &channel->line->reduced_preferences.audio, sizeof(channel->preferences.audio));
+	memcpy(&channel->capabilities.audio, &channel->line->combined_capabilities.audio, sizeof(channel->capabilities.audio));
+	memcpy(&channel->preferences.video, &channel->line->reduced_preferences.video, sizeof(channel->preferences.video));
+	memcpy(&channel->capabilities.video, &channel->line->combined_capabilities.video, sizeof(channel->capabilities.video));
 	/* \todo we should use */
 	// sccp_line_copyMinimumCodecSetFromLineToChannel(l, c); 
 	
@@ -321,7 +325,6 @@ void sccp_channel_setDevice(sccp_channel_t * channel, const sccp_device_t * devi
  */
 static void sccp_channel_recalculateReadformat(sccp_channel_t * channel)
 {
-
 	if (channel->rtp.audio.writeState != SCCP_RTP_STATUS_INACTIVE && channel->rtp.audio.writeFormat != SKINNY_CODEC_NONE) {
 		//pbx_log(LOG_NOTICE, "we already have a write format, dont change codec\n");
 		channel->rtp.audio.readFormat = channel->rtp.audio.writeFormat;
@@ -346,7 +349,6 @@ static void sccp_channel_recalculateReadformat(sccp_channel_t * channel)
 		skinny_codec_t codecs[] = { channel->rtp.audio.readFormat };
 		PBX(set_nativeAudioFormats) (channel, codecs, 1);
 		PBX(rtp_setReadFormat) (channel, channel->rtp.audio.readFormat);
-
 	}
 	char s1[512], s2[512], s3[512], s4[512];
 
