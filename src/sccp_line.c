@@ -464,10 +464,10 @@ void sccp_line_copyCodecSetsFromLineToChannel(sccp_line_t *l, sccp_channel_t *c)
 			memcpy(&c->preferences.audio , &linedevice->device->preferences.audio , sizeof(c->preferences.audio));
 			memcpy(&c->preferences.video , &linedevice->device->preferences.video , sizeof(c->preferences.video));
 		} else {
-			sccp_utils_combineCodecSets(&c->capabilities.audio, linedevice->device->capabilities.audio);
-			sccp_utils_combineCodecSets(&c->capabilities.video, linedevice->device->capabilities.video);
-			sccp_utils_reduceCodecSet(&c->preferences.audio , linedevice->device->preferences.audio);
-			sccp_utils_reduceCodecSet(&c->preferences.video , linedevice->device->preferences.video);
+			sccp_utils_combineCodecSets(c->capabilities.audio, linedevice->device->capabilities.audio);
+			sccp_utils_combineCodecSets(c->capabilities.video, linedevice->device->capabilities.video);
+			sccp_utils_reduceCodecSet(c->preferences.audio , linedevice->device->preferences.audio);
+			sccp_utils_reduceCodecSet(c->preferences.video , linedevice->device->preferences.video);
 		}
 	}
 	SCCP_LIST_UNLOCK(&l->devices);
@@ -553,8 +553,8 @@ void sccp_line_copyCapabilitiesFromDeviceToLine(sccp_line_t *l, sccp_device_t *d
 		memcpy(&l->combined_capabilities.audio, &d->capabilities.audio, sizeof(l->combined_capabilities.audio));
 		memcpy(&l->combined_capabilities.video, &d->capabilities.video, sizeof(l->combined_capabilities.video));
 	} else {
-		sccp_utils_combineCodecSets((skinny_codec_t **)&l->combined_capabilities.audio, d->capabilities.audio);
-		sccp_utils_combineCodecSets((skinny_codec_t **)&l->combined_capabilities.video, d->capabilities.video);
+		sccp_utils_combineCodecSets(l->combined_capabilities.audio, d->capabilities.audio);
+		sccp_utils_combineCodecSets(l->combined_capabilities.video, d->capabilities.video);
 	}
 	pbx_log(LOG_NOTICE, "%s: copyCodecSetsFromDevice %s ToLine %s: first cap: %d\n", d->id, d->id, l->name, l->combined_capabilities.audio[0]);
 }
@@ -575,8 +575,8 @@ static void sccp_line_copyPreferencesFromDeviceToLine(sccp_line_t *l, sccp_devic
 			memcpy(&l->reduced_preferences.audio , &d->preferences.audio , sizeof(l->reduced_preferences.audio ));
 			memcpy(&l->reduced_preferences.video , &d->preferences.video , sizeof(l->reduced_preferences.video ));
 		} else {
-			sccp_utils_reduceCodecSet  ((skinny_codec_t **)&l->reduced_preferences.audio , d->preferences.audio );
-			sccp_utils_reduceCodecSet  ((skinny_codec_t **)&l->reduced_preferences.video , d->preferences.video );
+			sccp_utils_reduceCodecSet (l->reduced_preferences.audio , d->preferences.audio );
+			sccp_utils_reduceCodecSet (l->reduced_preferences.video , d->preferences.video );
 		}
 		l->reduced_preferences_auto_generated = TRUE;
 	}

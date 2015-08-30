@@ -447,10 +447,9 @@ boolean_t sccp_utils_isCodecCompatible(skinny_codec_t codec, const skinny_codec_
 /*!
  * \brief get smallest common denominator codecset
  */
-void sccp_utils_reduceCodecSet(skinny_codec_t (*baseCodecs)[SKINNY_MAX_CAPABILITIES], const skinny_codec_t reduceByCodecs[])
+void sccp_utils_reduceCodecSet(skinny_codec_t base[SKINNY_MAX_CAPABILITIES], const skinny_codec_t reduceByCodecs[SKINNY_MAX_CAPABILITIES])
 {
 	uint8_t x = 0, y;
-	skinny_codec_t *base = *(baseCodecs);
 	boolean_t found = FALSE;
 
 	while (x < SKINNY_MAX_CAPABILITIES && base[x] != SKINNY_CODEC_NONE) {
@@ -467,14 +466,11 @@ void sccp_utils_reduceCodecSet(skinny_codec_t (*baseCodecs)[SKINNY_MAX_CAPABILIT
 		}
 		x++;
 	}
-	
-	//baseCodecs = (&base);
 }
 
-void sccp_utils_combineCodecSets(skinny_codec_t (*baseCodecs)[SKINNY_MAX_CAPABILITIES], const skinny_codec_t addCodecs[])
+void sccp_utils_combineCodecSets(skinny_codec_t base[SKINNY_MAX_CAPABILITIES], const skinny_codec_t addCodecs[SKINNY_MAX_CAPABILITIES])
 {
 	uint8_t x, y;
-	skinny_codec_t *base = *(baseCodecs);
 	boolean_t found = FALSE;
 	
 	for (y = 0; y < SKINNY_MAX_CAPABILITIES && addCodecs[y] != SKINNY_CODEC_NONE; y++) {
@@ -490,7 +486,6 @@ void sccp_utils_combineCodecSets(skinny_codec_t (*baseCodecs)[SKINNY_MAX_CAPABIL
 			base[x] = addCodecs[y];
 		}
 	}
-	//baseCodecs = (&base);
 }
 
 #ifndef HAVE_PBX_STRINGS_H
