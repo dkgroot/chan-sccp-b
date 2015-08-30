@@ -618,7 +618,7 @@ static void sccp_sync_capabilities_with_peer(sccp_channel_t *c, PBX_CHANNEL_TYPE
 			if (c->remoteCapabilities.audio[0] == SKINNY_CODEC_NONE) {
 				memcpy(&c->remoteCapabilities.audio, &tmpCodecs, sizeof(c->remoteCapabilities.audio));
 			} else {
-				sccp_utils_reduceCodecSet((skinny_codec_t **)&c->remoteCapabilities.audio , tmpCodecs);
+				sccp_utils_reduceCodecSet(c->remoteCapabilities.audio , tmpCodecs);
 			}
 			//ast_channel_unref(remotePeer);
 		}
