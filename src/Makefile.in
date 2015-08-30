@@ -517,7 +517,7 @@ chan_sccp_la_SOURCES = sccp_enum.h chan_sccp.h sccp_cli.h \
 	sccp_devstate.c
 
 #if CS_EXPERIMENTAL_XML
-#chan_sccp_la_SOURCES	+=      sccp_webservice.h       sccp_xml.h 		sccp_xml_embedded.h	sccp_webservice.c	\
+#chan_sccp_la_SOURCES	+=      sccp_webservice.h       sccp_xml.h 		sccp_xml_embedded.h	sccp_webservice.c			\
 #                                sccp_xml.c
 #endif 
 EXTRA_chan_sccp_la_SOURCES = $(am__append_1)
@@ -526,8 +526,8 @@ chan_sccp_la_DEPENDENCIES = $(PBX_GENERAL) $(PBX_MAJOR) $(PBX_MINOR) revision.h
 chan_sccp_la_CFLAGS = $(AM_CFLAGS) $(PBX_CFLAGS) $(GDB_FLAGS) \
 	$(PTHREAD_CFLAGS) $(COVERAGE_CFLAGS) $(EVENT_CFLAGS) \
 	$(LIBEXSLT_CFLAGS) $(LIBCURL_CFLAGS) \
-	$(ax_warn_cflags_variable) $(LIBBFD) -D_REENTRANT \
-	-D_GNU_SOURCE -DCRYPTO -fPIC -pipe -Wall
+	$(ax_warn_cflags_variable) -D_REENTRANT -D_GNU_SOURCE -DCRYPTO \
+	-fPIC -pipe -Wall
 chan_sccp_la_LDFLAGS = -avoid-version -module $(PBX_LDFLAGS) $(PTHREAD_LIBS) $(EVENT_LIBS) $(COVERAGE_CFLAGS) $(COVERAGE_LDFLAGS) $(LIBEXSLT_LIBS) $(LIBCURL_LIBS) $(EVENT_LIBS) $(CLANG_BLOCKS_LIBS) $(LIBBFD)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -1132,41 +1132,41 @@ revision.h: .revision
 	@cd "@abs_top_srcdir@/src"
 
 .revision:
-	@cd "@abs_top_srcdir@/src";																				\
-	if test -f @abs_builddir@/revision.h; then																		\
-		if test ! -z "`find @abs_builddir@/revision.h -mmin +60`"; then															\
-			@abs_top_srcdir@/tools/autorevision -t h -f -o @abs_top_srcdir@/.revision  >"@abs_builddir@/revision.h" 2>/dev/null;						\
-		fi 																						\
-	else																							\
-		@abs_top_srcdir@/tools/autorevision -t h -f -o @abs_top_srcdir@/.revision  >"@abs_builddir@/revision.h" 2>/dev/null;								\
+	@cd "@abs_top_srcdir@/src";														\
+	if test -f @abs_builddir@/revision.h; then												\
+		if test ! -z "`find @abs_builddir@/revision.h -mmin +60`"; then									\
+			@abs_top_srcdir@/tools/autorevision -t h -f -o @abs_top_srcdir@/.revision  >"@abs_builddir@/revision.h" 2>/dev/null;	\
+		fi 																\
+	else																	\
+		@abs_top_srcdir@/tools/autorevision -t h -f -o @abs_top_srcdir@/.revision  >"@abs_builddir@/revision.h" 2>/dev/null;		\
 	fi
 
 sccp_enum.h: sccp_enum.in @abs_top_srcdir@/tools/gen_sccp_enum.awk
-	@if [ sccp_enum.in -nt $@ ] || [ @abs_top_srcdir@/tools/gen_sccp_enum.awk -nt $@ ]; then				\
-		$(MAKE) gen_enum;												\
+	@if [ sccp_enum.in -nt $@ ] || [ @abs_top_srcdir@/tools/gen_sccp_enum.awk -nt $@ ]; then						\
+		$(MAKE) gen_enum;														\
 	fi
 
 gen_enum: sccp_enum.in @abs_top_srcdir@/tools/gen_sccp_enum.awk
-	@if [ "$(GAWK)" != "No" ]; then 												\
-		echo "  GEN      sccp_enum.h";											\
-		echo "  GEN      sccp_enum.c";											\
+	@if [ "$(GAWK)" != "No" ]; then 													\
+		echo "  GEN      sccp_enum.h";													\
+		echo "  GEN      sccp_enum.c";													\
 		$(GAWK) -v out_header_file="@abs_builddir@/src/sccp_enum.h" -v out_source_file="@abs_builddir@/src/sccp_enum.c" -f "@abs_top_srcdir@/tools/gen_sccp_enum.awk" @abs_top_srcdir@/src/sccp_enum.in >/dev/null ;	\
 	fi
 
 install-csmodLTLIBRARIES:
 	@$(NORMAL_INSTALL)
 	@test -z "$(DESTDIR)$(csmoddir)" || $(MKDIR_P) "$(DESTDIR)$(csmoddir)"							
-	@if test "x$(strip_binaries)"=="xyes" ; then 										\
-	        $(INSTALL) $(INSTALL_STRIP_FLAG) .libs/chan_sccp.so "$(DESTDIR)$(csmoddir)"; 					\
-	else 															\
-	        $(INSTALL) .libs/chan_sccp.so "$(DESTDIR)$(csmoddir)"; 								\
+	@if test "x$(strip_binaries)"=="xyes" ; then 												\
+	        $(INSTALL) $(INSTALL_STRIP_FLAG) .libs/chan_sccp.so "$(DESTDIR)$(csmoddir)"; 							\
+	else 																	\
+	        $(INSTALL) .libs/chan_sccp.so "$(DESTDIR)$(csmoddir)"; 										\
 	fi
-	@if test -d "$(DESTDIR)$(csmoddir)"; then                                          					\
-		echo    "==============================================================================================="; 	\
-		echo    "Installed chan_sccp.so to '$(DESTDIR)$(csmoddir)'...";           					\
-		echo    "===============================================================================================";	\
-		echo    "Please restart asterisk to use the new version of chan_sccp.so"; 					\
-		echo    "==============================================================================================="; 	\
+	@if test -d "$(DESTDIR)$(csmoddir)"; then                                          							\
+		echo    "==============================================================================================="; 			\
+		echo    "Installed chan_sccp.so to '$(DESTDIR)$(csmoddir)'...";           							\
+		echo    "===============================================================================================";			\
+		echo    "Please restart asterisk to use the new version of chan_sccp.so"; 							\
+		echo    "==============================================================================================="; 			\
 	fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

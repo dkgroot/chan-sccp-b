@@ -702,7 +702,6 @@ static int sccp_wrapper_asterisk113_indicate(PBX_CHANNEL_TYPE * ast, int ind, co
 					sccp_wrapper_asterisk13_setDialedNumber(c, c->dialedNumber);
 				}
 				PBX(set_callstate) (c, AST_STATE_RING);
-				sccp_sync_capabilities_with_peer(c, ast);
 			}
 			break;
 		case AST_CONTROL_BUSY:
@@ -1711,17 +1710,17 @@ static int sccp_wrapper_asterisk113_call(PBX_CHANNEL_TYPE * ast, const char *des
 
 }
 
-static int sccp_wrapper_asterisk113_answer(PBX_CHANNEL_TYPE * chan)
+static int sccp_wrapper_asterisk113_answer(PBX_CHANNEL_TYPE * astchan)
 {
 	//! \todo change this handling and split pbx and sccp handling -MC
 	int res = -1;
 	sccp_channel_t *channel = NULL;
 
-	if ((channel = get_sccp_channel_from_pbx_channel(chan))) {
-		if (!channel->pbx_callid_created && !ast_channel_callid(chan)) {
-			ast_callid_threadassoc_add(ast_channel_callid(chan));
+	if ((channel = get_sccp_channel_from_pbx_channel(astchan))) {
+		if (!channel->pbx_callid_created && !ast_channel_callid(astchan)) {
+			ast_callid_threadassoc_add(ast_channel_callid(astchan));
 		}
-		sccp_sync_capabilities_with_peer(channel, chan);
+		sccp_sync_capabilities_with_peer(channel, astchan);
 		res = sccp_pbx_answer(channel);
 		channel = sccp_channel_release(channel);
 	}
