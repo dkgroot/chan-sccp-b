@@ -480,6 +480,55 @@ static const char *asterisk_indication2str(int ind)
 	return "Unknown/Unhandled/IAX Indication";
 }
 
+static void sccp_sync_capabilities_with_peer(sccp_channel_t *c, PBX_CHANNEL_TYPE * ast)
+{
+	/*! \todo equivalent needs to be implemented */
+	/*
+	char buf[512];
+	PBX_CHANNEL_TYPE *remotePeer;
+	
+	struct ast_channel_iterator *iterator = ast_channel_iterator_all_new();
+	((struct ao2_iterator *) iterator)->flags |= AO2_ITERATOR_DONTLOCK;
+	PBX_CHANNEL_TYPE *remotePeer;
+
+	for (; (remotePeer = ast_channel_iterator_next(iterator)); ast_channel_unref(remotePeer)) {
+		if (pbx_find_channel_by_linkid(remotePeer, (void *) ast_channel_linkedid(ast))) {
+			AUTO_RELEASE sccp_channel_t *remoteSccpChannel = get_sccp_channel_from_pbx_channel(remotePeer);
+
+			skinny_codec_t tmpCodecs[SKINNY_MAX_CAPABILITIES];
+			if (remoteSccpChannel) {
+				sccp_multiple_codecs2str(buf, sizeof(buf) - 1, remoteSccpChannel->preferences.audio, ARRAY_LEN(remoteSccpChannel->preferences.audio));
+				sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "%s: remote preferences: %s\n", remoteSccpChannel->designator, buf);
+				memcpy(&tmpCodecs, &remoteSccpChannel->preferences.audio, sizeof(tmpCodecs));
+			} else {
+				sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "%s: remote nativeformats: %s\n", ast_channel_name(remotePeer), pbx_getformatname_multiple(buf, sizeof(buf) - 1, ast_channel_nativeformats(remotePeer)));
+				sccp_asterisk111_getSkinnyFormatMultiple(ast_channel_nativeformats(remotePeer), tmpCodecs, ARRAY_LEN(tmpCodecs));
+			}
+
+			// reduce to common set in-case of multiple Dialed Channels (e.g. Dial(SIP/1234&SCCP/4321)
+			if (c->remoteCapabilities.audio[0] == SKINNY_CODEC_NONE) {
+				memcpy(&c->remoteCapabilities.audio, &tmpCodecs, sizeof(c->remoteCapabilities.audio));
+			} else {
+				sccp_utils_reduceCodecSet(c->remoteCapabilities.audio , tmpCodecs);
+			}
+
+			// reduce to common set in-case of multiple Dialed Channels (e.g. Dial(SIP/1234&SCCP/4321)
+			if (c->remoteCapabilities.audio[0] == SKINNY_CODEC_NONE) {
+				memcpy(&c->remoteCapabilities.audio, &tmpCodecs, sizeof(c->remoteCapabilities.audio));
+			} else {
+				sccp_utils_reduceCodecSet(c->remoteCapabilities.audio , tmpCodecs);
+			}
+		}
+	}
+	ast_channel_iterator_destroy(iterator);
+	sccp_multiple_codecs2str(buf, sizeof(buf) - 1, c->remoteCapabilities.audio, ARRAY_LEN(c->remoteCapabilities.audio));
+	sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "remote caps: %s\n", buf);
+	if (c->rtp.audio.writeState == SCCP_RTP_STATUS_INACTIVE) {
+		sccp_channel_updateChannelCapability(c);
+	}
+	*/
+}
+
 static int sccp_wrapper_asterisk16_indicate(PBX_CHANNEL_TYPE * ast, int ind, const void *data, size_t datalen)
 {
 	sccp_channel_t *c = NULL;
@@ -533,6 +582,7 @@ static int sccp_wrapper_asterisk16_indicate(PBX_CHANNEL_TYPE * ast, int ind, con
 				// Allow signalling of RINGOUT only on outbound calls.
 				// Otherwise, there are some issues with late arrival of ringing
 				// indications on ISDN calls (chan_lcr, chan_dahdi) (-DD).
+				sccp_sync_capabilities_with_peer(c, ast);
 				sccp_indicate(d, c, SCCP_CHANNELSTATE_RINGOUT);
 				if (d->earlyrtp == SCCP_EARLYRTP_IMMEDIATE) {
 					/* 
@@ -1688,13 +1738,14 @@ static int sccp_wrapper_asterisk16_call(PBX_CHANNEL_TYPE * ast, char *dest, int 
 
 }
 
-static int sccp_wrapper_asterisk16_answer(PBX_CHANNEL_TYPE * chan)
+static int sccp_wrapper_asterisk16_answer(PBX_CHANNEL_TYPE * astchan)
 {
 	//! \todo change this handling and split pbx and sccp handling -MC
 	int res = -1;
 	sccp_channel_t *channel = NULL;
 
-	if ((channel = get_sccp_channel_from_pbx_channel(chan))) {
+	if ((channel = get_sccp_channel_from_pbx_channel(astchan))) {
+		sccp_sync_capabilities_with_peer(channel, astchan);
 		res = sccp_pbx_answer(channel);
 		channel = sccp_channel_release(channel);
 	}
@@ -2139,7 +2190,7 @@ static boolean_t sccp_wrapper_asterisk16_rtpGetPeer(PBX_RTP_TYPE * rtp, struct s
 	struct sockaddr_in *tmpaddress = (struct sockaddr_in *) address;
 
 	ast_rtp_get_peer(rtp, tmpaddress);
-	address = (struct sockaddr_storage *) tmpaddress;
+	address = (struct sockaddr_storage *) get_unaligned_uint32(tmpaddress);
 	address->ss_family = AF_INET;
 	return TRUE;
 }
@@ -2149,7 +2200,7 @@ static boolean_t sccp_wrapper_asterisk16_rtpGetUs(PBX_RTP_TYPE * rtp, struct soc
 	struct sockaddr_in *tmpaddress = (struct sockaddr_in *) address;
 
 	ast_rtp_get_us(rtp, tmpaddress);
-	address = (struct sockaddr_storage *) tmpaddress;
+	address = (struct sockaddr_storage *) get_unaligned_uint32(tmpaddress);
 	address->ss_family = AF_INET;
 	return TRUE;
 }
