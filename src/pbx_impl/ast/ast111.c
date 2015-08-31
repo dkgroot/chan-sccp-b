@@ -557,11 +557,18 @@ static void sccp_sync_capabilities_with_peer(sccp_channel_t *c, PBX_CHANNEL_TYPE
 		if (pbx_find_channel_by_linkid(remotePeer, (void *) ast_channel_linkedid(ast))) {
 			AUTO_RELEASE sccp_channel_t *remoteSccpChannel = get_sccp_channel_from_pbx_channel(remotePeer);
 
-			skinny_codec_t tmpCodecs[SKINNY_MAX_CAPABILITIES];
+			skinny_codec_t tmpCodecs[SKINNY_MAX_CAPABILITIES] = {0};
 			if (remoteSccpChannel) {
-				sccp_multiple_codecs2str(buf, sizeof(buf) - 1, remoteSccpChannel->preferences.audio, ARRAY_LEN(remoteSccpChannel->preferences.audio));
-				sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "%s: remote preferences: %s\n", remoteSccpChannel->designator, buf);
-				memcpy(&tmpCodecs, &remoteSccpChannel->preferences.audio, sizeof(tmpCodecs));
+					sccp_multiple_codecs2str(buf, sizeof(buf) - 1, remoteSccpChannel->line->reduced_preferences.audio, ARRAY_LEN(remoteSccpChannel->line->reduced_preferences.audio));
+					sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "%s: remote preferences: %s\n", remoteSccpChannel->designator, buf);
+					//memcpy(&tmpCodecs, &remoteSccpChannel->line->combined_capabilities.audio, sizeof(tmpCodecs));
+					memcpy(&tmpCodecs, &remoteSccpChannel->line->reduced_preferences.audio, sizeof(tmpCodecs));
+				} else {
+					sccp_multiple_codecs2str(buf, sizeof(buf) - 1, remoteSccpChannel->preferences.audio, ARRAY_LEN(remoteSccpChannel->preferences.audio));
+					sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "%s: remote preferences: %s\n", remoteSccpChannel->designator, buf);
+					//memcpy(&tmpCodecs, &remoteSccpChannel->capabilities.audio, sizeof(tmpCodecs));
+					memcpy(&tmpCodecs, &remoteSccpChannel->preferences.audio, sizeof(tmpCodecs));
+				}
 			} else {
 				sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "%s: remote nativeformats: %s\n", ast_channel_name(remotePeer), pbx_getformatname_multiple(buf, sizeof(buf) - 1, ast_channel_nativeformats(remotePeer)));
 				sccp_asterisk111_getSkinnyFormatMultiple(ast_channel_nativeformats(remotePeer), tmpCodecs, ARRAY_LEN(tmpCodecs), AST_FORMAT_TYPE_AUDIO);
