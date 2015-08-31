@@ -559,6 +559,7 @@ static void sccp_sync_capabilities_with_peer(sccp_channel_t *c, PBX_CHANNEL_TYPE
 
 			skinny_codec_t tmpCodecs[SKINNY_MAX_CAPABILITIES] = {0};
 			if (remoteSccpChannel) {
+				if (remoteSccpChannel->line) {
 					sccp_multiple_codecs2str(buf, sizeof(buf) - 1, remoteSccpChannel->line->reduced_preferences.audio, ARRAY_LEN(remoteSccpChannel->line->reduced_preferences.audio));
 					sccp_log(DEBUGCAT_CODEC) (VERBOSE_PREFIX_4 "%s: remote preferences: %s\n", remoteSccpChannel->designator, buf);
 					//memcpy(&tmpCodecs, &remoteSccpChannel->line->combined_capabilities.audio, sizeof(tmpCodecs));
