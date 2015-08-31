@@ -1017,6 +1017,8 @@ void sccp_channel_updateMediaTransmission(sccp_channel_t * channel)
 /*!
  * \brief Start Multi Media Transmission (Video) on Channel
  * \param channel SCCP Channel
+ *
+ * \todo extend this function to support multiple video codecs
  */
 void sccp_channel_startMultiMediaTransmission(sccp_channel_t * channel)
 {
@@ -1556,7 +1558,7 @@ void sccp_channel_answer(const sccp_device_t * device, sccp_channel_t * channel)
 
 		memcpy(&channel->preferences.audio[numFoundCodecs], tempCodecPreferences, sizeof(skinny_codec_t) * (ARRAY_LEN(channel->preferences.audio) - numFoundCodecs));
 	}
-	//! \todo move this to openreceive- and startmediatransmission (we do calc in openreceiv and startmedia, so check if we can remove)
+	//! \todo move this to openreceive- and startmediatransmission (we do calc in openreceivechannel and startmediatransmission, so check if we can remove)
 #endif
 	sccp_log((DEBUGCAT_CORE)) (VERBOSE_PREFIX_3 "%s: (sccp_channel_answer) Update Channel Capability\n", DEV_ID_LOG(device));
 	sccp_channel_updateChannelCapability(channel);
@@ -2440,6 +2442,7 @@ int sccp_channel_forward(sccp_channel_t * sccp_channel_parent, sccp_linedevices_
 		return -1;
 	}
 	/* Update rtp setting to match predecessor */
+	/*! \note why do we set the default to WIDEBAND here ? would a generaly accepted one (ulaw etc) not be a better idea */
 	skinny_codec_t codecs[] = { SKINNY_CODEC_WIDEBAND_256K };
 	PBX(set_nativeAudioFormats) (sccp_forwarding_channel, codecs, 1);
 	PBX(rtp_setWriteFormat) (sccp_forwarding_channel, SKINNY_CODEC_WIDEBAND_256K);
@@ -2536,6 +2539,9 @@ void sccp_channel_park(sccp_channel_t * channel)
  * \param c SCCP Channel
  * \param data Stringified Skinny Codec ShortName
  * \return Success as Boolean
+ *
+ * \todo what needs to be done for reduce/combined sets in sccp_line with this command ?
+ * \todo should it be possible to influence video codecs with this command as well ?
  */
 boolean_t sccp_channel_setPreferredCodec(sccp_channel_t * c, const void *data)
 {
@@ -2548,7 +2554,7 @@ boolean_t sccp_channel_setPreferredCodec(sccp_channel_t * c, const void *data)
 		return FALSE;
 	}
 
-	skinny_codec_t tempCodecPreferences[ARRAY_LEN(c->preferences.audio)];
+	skinny_codec_t tempCodecPreferences[SKINNY_MAX_CAPABILITIES];
 
 	sccp_copy_string(text, data, sizeof(text));
 
@@ -2557,7 +2563,6 @@ boolean_t sccp_channel_setPreferredCodec(sccp_channel_t * c, const void *data)
 
 	for (x = 0; x < ARRAY_LEN(skinny_codecs) && numFoundCodecs < ARRAY_LEN(c->preferences.audio); x++) {
 		if (!strcasecmp(skinny_codecs[x].key, text)) {
-
 			c->preferences.audio[numFoundCodecs] = skinny_codecs[x].codec;
 			numFoundCodecs++;
 			/* we can have multiple codec versions, so dont break on this step */
@@ -2567,7 +2572,7 @@ boolean_t sccp_channel_setPreferredCodec(sccp_channel_t * c, const void *data)
 	}
 	memcpy(&c->preferences.audio[numFoundCodecs], tempCodecPreferences, sizeof(skinny_codec_t) * (ARRAY_LEN(c->preferences.audio) - numFoundCodecs));
 
-	/** update capabilities if somthing changed */
+	/** update capabilities if something changed */
 	if (numFoundCodecs > 0) {
 		sccp_channel_updateChannelCapability(c);
 	}
@@ -2587,8 +2592,6 @@ boolean_t sccp_channel_setVideoMode(sccp_channel_t * c, const void *data){
 	}else {
 		res = TRUE;
 	}
-
-	
 
 	return res;
 }
