@@ -532,7 +532,7 @@ void sccp_line_copyCapabilitiesFromDeviceToLine(sccp_line_t *l, sccp_device_t *d
 		sccp_utils_combineCodecSets(l->combined_capabilities.audio, d->capabilities.audio);
 		sccp_utils_combineCodecSets(l->combined_capabilities.video, d->capabilities.video);
 	}
-	pbx_log(LOG_NOTICE, "%s: copyCodecSetsFromDevice %s ToLine %s: first cap: %d\n", d->id, d->id, l->name, l->combined_capabilities.audio[0]);
+	//pbx_log(LOG_NOTICE, "%s: copyCodecSetsFromDevice %s ToLine %s: first cap: %d\n", d->id, d->id, l->name, l->combined_capabilities.audio[0]);
 }
 
 /*!
