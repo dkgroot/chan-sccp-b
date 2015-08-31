@@ -606,7 +606,7 @@ static void sccp_sync_capabilities_with_peer(sccp_channel_t *c, PBX_CHANNEL_TYPE
 		if (pbx_find_channel_by_linkid(remotePeer, (void *) ast_channel_linkedid(ast))) {
 			AUTO_RELEASE sccp_channel_t *remoteSccpChannel = get_sccp_channel_from_pbx_channel(remotePeer);
 
-			skinny_codec_t tmpCodecs[SKINNY_MAX_CAPABILITIES];
+			skinny_codec_t tmpCodecs[SKINNY_MAX_CAPABILITIES] = {0};
 			if (remoteSccpChannel) {
 				if (remoteSccpChannel->line) {
 					sccp_multiple_codecs2str(buf, sizeof(buf) - 1, remoteSccpChannel->line->reduced_preferences.audio, ARRAY_LEN(remoteSccpChannel->line->reduced_preferences.audio));
