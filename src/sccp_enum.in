@@ -610,9 +610,21 @@ enum registrationstate {
 	SKINNY_DEVICE_RS_FAILED,			,	"Failed",
 	SKINNY_DEVICE_RS_TIMEOUT,			,	"Time Out",
 	SKINNY_DEVICE_RS_NONE,				,	"None",
-	SKINNY_DEVICE_RS_TOKEN,				,	"Token",
+	SKINNY_DEVICE_RS_TOKEN,				,	"SCCP Token",
+	SKINNY_DEVICE_RS_SPCPTOKEN,			,	"SPCP Token",
 	SKINNY_DEVICE_RS_PROGRESS,			,	"Progress",
 	SKINNY_DEVICE_RS_OK,				,	"OK", 
+}
+
+enum registrationevent {
+	SCCP_REGEV_NULL,				,	"null",
+	SCCP_REGEV_TOKEN_REQ,				,	"token req",
+	SCCP_REGEV_SPCPTOKEN_REQ,			,	"spcp token req",
+	SCCP_REGEV_REGISTER_REQ,			,	"register req",
+	SCCP_REGEV_UNREGISTER_REQ,			,	"unregister req",
+	SCCP_REGEV_REGISTERED,				,	"registered",
+	SCCP_REGEV_TIMEOUT,				,	"timeout",
+	SCCP_REGEV_TIMEOUT2,				,	"timeout2",
 }
 
 /*!

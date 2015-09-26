@@ -107,6 +107,7 @@ const char *const sccp_session_getDesignator(constSessionPtr session);
 void sccp_session_sendmsg(constDevicePtr device, sccp_mid_t t);
 int sccp_session_send(constDevicePtr device, const sccp_msg_t * msg);
 int sccp_session_send2(constSessionPtr s, sccp_msg_t * msg);
+const skinny_registrationstate_t sccp_fsm_registrationState(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData);
 int sccp_session_retainDevice(constSessionPtr session, constDevicePtr device);
 void sccp_session_releaseDevice(constSessionPtr volatile session);
 sccp_session_t *sccp_session_reject(constSessionPtr session, char *message);

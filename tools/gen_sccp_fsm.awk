@@ -1,84 +1,120 @@
 #!/usr/bin/gawk -f
 BEGIN {
     name=""
-    type=""
+    statetype=""
+    eventtype=""
+    lock=""
+    unlock=""
+    stateorigin=""
     signature=""
     action_signature=""
     action_parameters=""
     origlines=""
-    fsm=0
+    fsm="NONE"
 }
 
-fsm == 0 && /^\/\*FSM\*\*/ {
+fsm == "NONE" && /^\/\*FSM\*\*/ {
     origlines=origlines $0
-    fsm=1
+    fsm="HEADER"
     name=""
-    type=""
+    statetype=""
+    eventtype=""
+    lock=""
+    unlock=""
+    stateorigin=""
     signature=""
     action_signature=""
     action_parameters=""
     FS=":"
 }
 
-fsm == 0 {
+fsm == "NONE" {
     print $0
 }
 
-fsm == 1 && /^name:[ \t]*[a-zA-Z]/ {
+fsm == "HEADER" && /^name:[ \t]*[a-zA-Z]/ {
     origlines=origlines "\n" $0
     name=$2
-    fsm=2
-    next
-}
-fsm == 2 && /^type:[ \t]*[a-zA-Z]/ {
-    origlines=origlines "\n" $0
-    type=$2
-    fsm=3
+    fsm="FSMNAME"
     next
 }
 
-fsm == 3 && /^signature:\((.*)\)$/ {
+fsm == "FSMNAME" && /^statetype:[ \t]*[a-zA-Z]/ {
+    origlines=origlines "\n" $0
+    statetype=$2
+    fsm="STATETYPE"
+    next
+}
+
+fsm == "STATETYPE" && /^eventtype:[ \t]*[a-zA-Z]/ {
+    origlines=origlines "\n" $0
+    eventtype=$2
+    fsm="EVENTTYPE"
+    next
+}
+
+fsm == "EVENTTYPE" && /^lock:.*/ {
+    origlines=origlines "\n" $0
+    lock=$2
+    fsm="LOCK"
+    next
+}
+
+fsm == "LOCK" && /^unlock:.*/ {
+    origlines=origlines "\n" $0
+    unlock=$2
+    fsm="UNLOCK"
+    next
+}
+
+fsm == "UNLOCK" && /^stateorigin:.*/ {
+    origlines=origlines "\n" $0
+    stateorigin=$2
+    fsm="STATEORIGIN"
+    next
+}
+fsm == "STATEORIGIN" && /^signature:\((.*)\)$/ {
     origlines=origlines "\n" $0
     signature=$2
-    fsm=4
+    fsm="SIGNATURE"
     next
 }
 
-fsm == 4 && /^action_signature:\((.*)\)$/ {
+fsm == "SIGNATURE" && /^action_signature:\((.*)\)$/ {
     origlines=origlines "\n" $0
     action_signature=$2
-    fsm=5
+    fsm="ACTION_SIGNATURE"
     next
 }
 
-fsm == 5 && /^action_parameters:\((.*)\)$/ {
+fsm == "ACTION_SIGNATURE" && /^action_parameters:\((.*)\)$/ {
     origlines=origlines "\n" $0
     action_parameters=$2
-    fsm=6
+    fsm="ACTION_PARAMETERS"
     FS=" "
     next
 }
 
-fsm == 6 && /^\#.*$/ {
+fsm == "ACTION_PARAMETERS" && /^\#.*$/ {
     origlines=origlines "\n" $0
     skip=1
     next
 }
 
-fsm == 6 && /^END_FSM_TABLE/ {
+fsm == "ACTION_PARAMETERS" && /^END_FSM_TABLE/ {
     origlines=origlines "\n" $0
-    fsm=7
+    fsm="END_FSM"
     next
 }
 
-fsm == 7 && /[\/]?\*\*FSM_END\*\// {
-    fsm=0
+fsm == "END_FSM" && /[\/]?\*\*FSM_END\*\// {
+    fsm="NONE"
     print_origlines()
-    generate_code(name, type, signature, action_signature, action_parameters)
+    generate_code(name, statetype, eventtype, lock, unlock, stateorigin, signature, action_signature, action_parameters)
     next
 }
 
-fsm == 6 {
+fsm == "ACTION_PARAMETERS" {
     origlines=origlines "\n" $0
     state=$1
     event=$3
@@ -101,36 +137,13 @@ function print_origlines() {
     print origlines
 }
 
-function generate_event_enum(name, type) {
-    comma=0
-    print "enum sccp_" name "_event {"
-    for (event in events) {
-    	if (event != "-") {
-        	print "	SCCP_EVENT_" toupper(event) ","
-        }
-    }
-    print "};"
-    print ""
-    printf "static const char * %s_event_str[] = {", name
-    for (event in events) {
-        if (event != "-") {
-            if (comma) {
-                printf ","
-            }
-            printf "\"%s\"", tolower(event)
-            comma=1
-        }
-    }
-    print "};"
-}
-
-function generate_transition_table(name, type, action_signature) 
+function generate_transition_table(name, statetype, action_signature) 
 {
     print "	struct state_transitions {"
     print "		const boolean_t (*action) " action_signature ";"
     print "		const char * action_name;"
-    print "		" type "_t newstate;"
-    print "		" type "_t failstate;"
+    print "		" statetype "_t newstate;"
+    print "		" statetype "_t failstate;"
     print "	} const state_transition_table[" length(states) "][" length(events) "] = {"
     for (state in states) {
         if (state!="INITIAL") {
@@ -150,13 +163,13 @@ function generate_transition_table(name, type, action_signature)
                     }
                     resnewstate = statemachine_newstate[state][refevent]
                     if (resnewstate == "") {
-                        resnewstate = toupper(type) "_SENTINEL"
+                        resnewstate = toupper(statetype) "_SENTINEL"
                     }
                     resfailure = statemachine_failure[state][refevent]
                     if (resfailure == "") {
-                        resfailure = toupper(type) "_SENTINEL"
+                        resfailure = toupper(statetype) "_SENTINEL"
                     }
-                    print "			[SCCP_EVENT_" event "] = {" resaction "," resaction_str "," resnewstate "," resfailure "},"
+                    print "			[" event "] = {" resaction "," resaction_str "," resnewstate "," resfailure "},"
                 }
             }
             print "		},"
@@ -165,34 +178,36 @@ function generate_transition_table(name, type, action_signature)
     print "	};"
 }
 
-function generate_fsm (name, type, signature, action_signature, action_parameters) 
+function generate_fsm (name, statetype, eventtype, lock, unlock, stateorigin, signature, action_signature, action_parameters) 
 {
-    print "const " type "_t sccp_fsm_" name signature
+    print "const " statetype "_t sccp_fsm_" name signature
     print "{"
-    print "	" type "_t curstate;"
-    print "	" type "_t newstate;"
+    print "	assert(s != NULL);"
+    print "	sccp_session_t * const session = (sccp_session_t * const) s;		/* discard const */"
+    print "	" statetype "_t curstate;"
+    print "	" statetype "_t newstate;"
     print ""
-    generate_transition_table(name, type, action_signature)
+    generate_transition_table(name, statetype, action_signature)
     print ""
     print "	// get current state"
-    print "	sccp_private_lock(device);"
-    print "	curstate = device->privateData->" name ";"
-    print "	sccp_private_unlock(device);"
+    print "	"lock";"
+    print "	curstate = " stateorigin ";"
+    print "	"unlock";"
     print "	newstate = curstate;"
     print ""
     print "	struct state_transitions const *curtransition = &state_transition_table[curstate][event];"
     print ""
-    print "	sccp_log(DEBUGCAT_NEWCODE)(\"%s: (sccp_fsm_" name ") while in state:%s received event:%s\\n\", device->id,  " type "2str(curstate), " name "_event_str[event]);"
+    print "	sccp_log(DEBUGCAT_NEWCODE)(\"%s: (sccp_fsm_" name ") while in state:%s received event:%s\\n\", session->designator, " statetype "2str(curstate), " eventtype "2str(event));"
     print ""
     print "	// execute action and transition"
-    print "	if (curtransition->newstate != " toupper(type) "_SENTINEL) {"
+    print "	if (curtransition->newstate != " toupper(statetype) "_SENTINEL) {"
     print "		if (curtransition->action) {"
-    print "			sccp_log(DEBUGCAT_NEWCODE)(\"%s: (sccp_fsm_" name ") executing action: %s on device:%s with curstate:%s\\n\", device->id, curtransition->action_name, device->id, " type "2str(curstate));"
+    print "			sccp_log(DEBUGCAT_NEWCODE)(\"%s: (sccp_fsm_" name ") executing action: %s on device:%s with curstate:%s\\n\", session->designator, curtransition->action_name, session->designator, " statetype "2str(curstate));"
     print "			if (curtransition->action" action_parameters") {"
     print "				newstate = curtransition->newstate;"
     print "			} else {"
     print "				newstate = curtransition->failstate;"
-    print "				pbx_log(LOG_WARNING, \"%s: (sccp_fsm_" name ") action: %s returned FALSE\\n\", device->id, curtransition->action_name);";
+    print "				pbx_log(LOG_WARNING, \"%s: (sccp_fsm_" name ") action: %s returned FALSE\\n\", session->designator, curtransition->action_name);";
     print "			}"
     print "		} else {"
     print "			if (curtransition->newstate) {"
@@ -203,19 +218,19 @@ function generate_fsm (name, type, signature, action_signature, action_parameter
     print "		}"
     print ""
     print "		// set new state"
-    print "		sccp_private_lock(device);"
-    print "		device->privateData->" name " = newstate;"
-    print "		sccp_private_unlock(device);"
-    print "		sccp_log(DEBUGCAT_NEWCODE)(\"%s: (sccp_fsm_" name ") state:%s + action: %s -> newstate: %s\\n\", device->id, " type "2str(curstate), curtransition->action_name,  " type "2str(newstate));";
+    print "		"lock";"
+    print "		" stateorigin " = newstate;"
+    print "		"unlock";"
+    print "		sccp_log(DEBUGCAT_NEWCODE)(\"%s: (sccp_fsm_" name ") state:%s + event: %s -> action: %s => newstate: %s\\n\", session->designator, " statetype "2str(curstate), " eventtype "2str(event), curtransition->action_name,  " statetype "2str(newstate));";
     print "	} else {"
-    print "		pbx_log(LOG_NOTICE, \"%s: (sccp_fsm_" name ") action: %s ignored\\n\", device->id, curtransition->action_name);";
+    print "		pbx_log(LOG_NOTICE, \"%s: (sccp_fsm_" name ") action: %s ignored\\n\", session->designator, curtransition->action_name);";
     print "	}"
     print ""
     print "	return newstate;"
     print "}"
 }
 
-function generate_code(name, type, signature, action_signature, action_parameters) {
+function generate_code(name, statetype, eventtype, lock, unlock, stateorigin, signature, action_signature, action_parameters) {
     print "*/"
     print ""
     print "/*"
@@ -224,9 +239,7 @@ function generate_code(name, type, signature, action_signature, action_parameter
     print " * any changes will be discarded."
     print " */"
 
-    generate_event_enum(name)
-    print ""
-    generate_fsm(name, type, signature, action_signature, action_parameters)
+    generate_fsm(name, statetype, eventtype, lock, unlock, stateorigin, signature, action_signature, action_parameters)
     print ""
 
     print "/**FSM_END*/"

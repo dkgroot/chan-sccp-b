@@ -254,9 +254,12 @@ static const struct messageMap_cb sccpMessagesCbMap[] = {
 	[ExtensionDeviceCaps] = {sccp_handle_unknown_message, TRUE},
 	[DeviceToUserDataVersion1Message] = {sccp_handle_device_to_user, TRUE},
 	[DeviceToUserDataResponseVersion1Message] = {sccp_handle_device_to_user_response, TRUE},
-	[RegisterTokenRequest] = {sccp_handle_token_request, FALSE},
-	[UnregisterMessage] = {sccp_handle_unregister, FALSE},
-	[RegisterMessage] = {sccp_handle_register, FALSE},
+	//[RegisterTokenRequest] = {sccp_handle_token_request, FALSE},
+	//[UnregisterMessage] = {sccp_handle_unregister, FALSE},
+	//[RegisterMessage] = {sccp_handle_register, FALSE},
+	[RegisterTokenRequest] = {sccp_handle_registrationState, FALSE},
+	[UnregisterMessage] = {sccp_handle_registrationState, FALSE},
+	[RegisterMessage] = {sccp_handle_registrationState, FALSE},
 	[AlarmMessage] = {sccp_handle_alarm, FALSE},
 	[XMLAlarmMessage] = {sccp_handle_XMLAlarmMessage, FALSE},
 	[LocationInfoMessage] = {sccp_handle_LocationInfoMessage, FALSE},
@@ -266,7 +269,8 @@ static const struct messageMap_cb sccpMessagesCbMap[] = {
 };
 
 static const struct messageMap_cb spcpMessagesCbMap[] = {
-	[SPCPRegisterTokenRequest - SPCP_MESSAGE_OFFSET] = {sccp_handle_SPCPTokenReq, FALSE},
+	//[SPCPRegisterTokenRequest - SPCP_MESSAGE_OFFSET] = {sccp_handle_SPCPTokenReq, FALSE},
+	[SPCPRegisterTokenRequest - SPCP_MESSAGE_OFFSET] = {sccp_handle_registrationState, FALSE},
 	[UnknownVGMessage - SPCP_MESSAGE_OFFSET] = {NULL, FALSE},
 };
 /*!

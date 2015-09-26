@@ -1145,6 +1145,7 @@ typedef enum skinny_registrationstate {
 	SKINNY_DEVICE_RS_TIMEOUT,
 	SKINNY_DEVICE_RS_NONE,
 	SKINNY_DEVICE_RS_TOKEN,
+	SKINNY_DEVICE_RS_SPCPTOKEN,
 	SKINNY_DEVICE_RS_PROGRESS,
 	SKINNY_DEVICE_RS_OK,
 	SKINNY_REGISTRATIONSTATE_SENTINEL
@@ -1155,6 +1156,30 @@ skinny_registrationstate_t skinny_registrationstate_str2val(const char *lookup_s
 int skinny_registrationstate_str2intval(const char *lookup_str);
 char *skinny_registrationstate_all_entries(void);
 /* = End =========================================================================================       skinny_registrationstate === */
+
+
+/* = Begin =======================================================================================       skinny_registrationevent === */
+
+/*
+ * \brief enum skinny_registrationevent
+ */
+typedef enum skinny_registrationevent {
+	SCCP_REGEV_NULL,
+	SCCP_REGEV_TOKEN_REQ,
+	SCCP_REGEV_SPCPTOKEN_REQ,
+	SCCP_REGEV_REGISTER_REQ,
+	SCCP_REGEV_UNREGISTER_REQ,
+	SCCP_REGEV_REGISTERED,
+	SCCP_REGEV_TIMEOUT,
+	SCCP_REGEV_TIMEOUT2,
+	SKINNY_REGISTRATIONEVENT_SENTINEL
+} skinny_registrationevent_t;
+int skinny_registrationevent_exists(int skinny_registrationevent_int_value);
+const char * skinny_registrationevent2str(skinny_registrationevent_t enum_value);
+skinny_registrationevent_t skinny_registrationevent_str2val(const char *lookup_str);
+int skinny_registrationevent_str2intval(const char *lookup_str);
+char *skinny_registrationevent_all_entries(void);
+/* = End =========================================================================================       skinny_registrationevent === */
 
 
 /* = Begin =======================================================================================             skinny_mediastatus === */

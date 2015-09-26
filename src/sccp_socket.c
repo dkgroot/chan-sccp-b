@@ -79,6 +79,7 @@ struct sccp_session {
 	struct sockaddr_storage ourip;										/*!< Our IP is for rtp use */
 	struct sockaddr_storage ourIPv4;
 	char designator[32];
+	skinny_registrationstate_t registrationState;
 };														/*!< SCCP Session Structure */
 
 union sockaddr_union {
@@ -1138,6 +1139,7 @@ static void sccp_accept_connection(void)
 
 	/** set default handler for registration to sccp */
 	s->protocolType = SCCP_PROTOCOL;
+	s->registrationState = SKINNY_DEVICE_RS_NONE;
 
 	s->lastKeepAlive = time(0);
 	sccp_log((DEBUGCAT_CORE)) (VERBOSE_PREFIX_3 "SCCP: Accepted Client Connection from %s\n", addrStr);
@@ -1366,6 +1368,217 @@ int sccp_session_send2(constSessionPtr session, sccp_msg_t * msg)
 
 	return res;
 }
+#include "sccp_actions.h"
+static const boolean_t sccp_action_register_preregister(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) {
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+	sccp_handle_register(session, NULL, eventData->dataPtr);
+	return TRUE;
+}
+
+static const boolean_t sccp_action_register_token(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) {
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+
+	constMessagePtr msg_in = eventData->dataPtr;
+	if (msg_in->header.lel_messageId == RegisterTokenRequest) {
+		sccp_handle_token_request(session, NULL, msg_in);
+	} else {
+		sccp_handle_SPCPTokenReq(session, NULL, msg_in);
+	}
+	return TRUE;
+}
+
+static const boolean_t sccp_action_register_timeout(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) {
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+	return TRUE;
+}
+
+static const boolean_t sccp_action_register_register(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) 
+{
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+	return TRUE;
+}
+
+static const boolean_t sccp_action_register_crossession(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) {
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+	return TRUE;
+}
+
+static const boolean_t sccp_action_register_crosstoken(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) {
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+	return TRUE;
+}
+
+static const boolean_t sccp_action_register_unregister(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) {
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+	sccp_handle_unregister(session, NULL, eventData->dataPtr);
+	return TRUE;
+}
+
+static const boolean_t sccp_action_register_cleanup(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData) {
+	sccp_log(DEBUGCAT_CORE)("%s: (%s) event:%s\n", session->designator, __PRETTY_FUNCTION__, skinny_registrationevent2str(event));
+        return TRUE;
+}
+
+/*FSM**
+name:registrationState
+statetype:skinny_registrationstate
+eventtype:skinny_registrationevent
+lock:sccp_session_lock(session)
+unlock:sccp_session_unlock(session)
+stateorigin:session->registrationState
+signature:(constSessionPtr s, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData)
+action_signature:(constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData)
+action_parameters:(session, event, eventData)
+#
+#STATE				| EVENT				| ACTION				| NEW_STATE			| FAIL
+#--------------------------------------------------------------------------------------------------------------------------------------------------------
+INITIAL				| -				| -					| SKINNY_DEVICE_RS_NONE		|
+SKINNY_DEVICE_RS_FAILED		| -				| -					| SKINNY_DEVICE_RS_NONE		|
+SKINNY_DEVICE_RS_TIMEOUT	| SCCP_REGEV_TIMEOUT2		| sccp_action_register_cleanup		| SKINNY_DEVICE_RS_NONE		|
+SKINNY_DEVICE_RS_TIMEOUT	| SCCP_REGEV_TOKEN_REQ		| sccp_action_register_crosstoken	| SKINNY_DEVICE_RS_PROGRESS	|
+SKINNY_DEVICE_RS_TIMEOUT	| SCCP_REGEV_SPCPTOKEN_REQ	| sccp_action_register_crosstoken	| SKINNY_DEVICE_RS_PROGRESS	|
+SKINNY_DEVICE_RS_TIMEOUT	| SCCP_REGEV_REGISTER_REQ	| sccp_action_register_crossession	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_NONE		| SCCP_REGEV_TOKEN_REQ		| sccp_action_register_token		| SKINNY_DEVICE_RS_TOKEN	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_NONE		| SCCP_REGEV_SPCPTOKEN_REQ	| sccp_action_register_token		| SKINNY_DEVICE_RS_SPCPTOKEN	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_NONE		| SCCP_REGEV_REGISTER_REQ	| sccp_action_register_preregister	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_TOKEN		| SCCP_REGEV_TIMEOUT		| sccp_action_register_timeout		| SKINNY_DEVICE_RS_TIMEOUT	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_TOKEN		| SCCP_REGEV_REGISTER_REQ	| sccp_action_register_preregister	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_SPCPTOKEN	| SCCP_REGEV_TIMEOUT		| sccp_action_register_timeout		| SKINNY_DEVICE_RS_TIMEOUT	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_SPCPTOKEN	| SCCP_REGEV_REGISTER_REQ	| sccp_action_register_preregister	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_PROGRESS	| SCCP_REGEV_TIMEOUT		| sccp_action_register_timeout		| SKINNY_DEVICE_RS_TIMEOUT	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_PROGRESS	| SCCP_REGEV_REGISTERED		| sccp_action_register_register		| SKINNY_DEVICE_RS_OK		| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_OK		| SCCP_REGEV_TIMEOUT		| sccp_action_register_timeout		| SKINNY_DEVICE_RS_TIMEOUT	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_OK		| SCCP_REGEV_TOKEN_REQ		| sccp_action_register_crosstoken	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_OK		| SCCP_REGEV_SPCPTOKEN_REQ	| sccp_action_register_crosstoken	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_OK		| SCCP_REGEV_REGISTER_REQ	| sccp_action_register_crossession	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
+SKINNY_DEVICE_RS_OK		| SCCP_REGEV_UNREGISTER_REQ	| sccp_action_register_unregister	| SKINNY_DEVICE_RS_NONE		| SKINNY_DEVICE_RS_FAILED
+END_FSM_TABLE
+*/
+
+/*
+ * code below was generated by fsm.awk generator
+ * please do not change code until FSM_END marker.
+ * any changes will be discarded.
+ */
+const skinny_registrationstate_t sccp_fsm_registrationState(constSessionPtr s, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData)
+{
+	assert(s != NULL);
+	sccp_session_t * const session = (sccp_session_t * const) s;		/* discard const */
+	skinny_registrationstate_t curstate;
+	skinny_registrationstate_t newstate;
+
+	struct state_transitions {
+		const boolean_t (*action) (constSessionPtr session, skinny_registrationevent_t event, sccp_fsm_event_data_t *eventData);
+		const char * action_name;
+		skinny_registrationstate_t newstate;
+		skinny_registrationstate_t failstate;
+	} const state_transition_table[8][8] = {
+		[SKINNY_DEVICE_RS_PROGRESS] = {
+			[SCCP_REGEV_UNREGISTER_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTERED] = {sccp_action_register_register,"sccp_action_register_register",SKINNY_DEVICE_RS_OK,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_REGISTER_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_SPCPTOKEN_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT] = {sccp_action_register_timeout,"sccp_action_register_timeout",SKINNY_DEVICE_RS_TIMEOUT,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TOKEN_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT2] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+		},
+		[SKINNY_DEVICE_RS_NONE] = {
+			[SCCP_REGEV_UNREGISTER_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTERED] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTER_REQ] = {sccp_action_register_preregister,"sccp_action_register_preregister",SKINNY_DEVICE_RS_PROGRESS,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_SPCPTOKEN_REQ] = {sccp_action_register_token,"sccp_action_register_token",SKINNY_DEVICE_RS_SPCPTOKEN,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TIMEOUT] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TOKEN_REQ] = {sccp_action_register_token,"sccp_action_register_token",SKINNY_DEVICE_RS_TOKEN,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TIMEOUT2] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+		},
+		[SKINNY_DEVICE_RS_TIMEOUT] = {
+			[SCCP_REGEV_UNREGISTER_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTERED] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTER_REQ] = {sccp_action_register_crossession,"sccp_action_register_crossession",SKINNY_DEVICE_RS_PROGRESS,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_SPCPTOKEN_REQ] = {sccp_action_register_crosstoken,"sccp_action_register_crosstoken",SKINNY_DEVICE_RS_PROGRESS,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TOKEN_REQ] = {sccp_action_register_crosstoken,"sccp_action_register_crosstoken",SKINNY_DEVICE_RS_PROGRESS,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT2] = {sccp_action_register_cleanup,"sccp_action_register_cleanup",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+		},
+		[SKINNY_DEVICE_RS_FAILED] = {
+			[SCCP_REGEV_UNREGISTER_REQ] = {NULL,"no_action",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTERED] = {NULL,"no_action",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTER_REQ] = {NULL,"no_action",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_SPCPTOKEN_REQ] = {NULL,"no_action",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT] = {NULL,"no_action",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TOKEN_REQ] = {NULL,"no_action",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT2] = {NULL,"no_action",SKINNY_DEVICE_RS_NONE,SKINNY_REGISTRATIONSTATE_SENTINEL},
+		},
+		[SKINNY_DEVICE_RS_SPCPTOKEN] = {
+			[SCCP_REGEV_UNREGISTER_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTERED] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTER_REQ] = {sccp_action_register_preregister,"sccp_action_register_preregister",SKINNY_DEVICE_RS_PROGRESS,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_SPCPTOKEN_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT] = {sccp_action_register_timeout,"sccp_action_register_timeout",SKINNY_DEVICE_RS_TIMEOUT,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TOKEN_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT2] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+		},
+		[SKINNY_DEVICE_RS_TOKEN] = {
+			[SCCP_REGEV_UNREGISTER_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTERED] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTER_REQ] = {sccp_action_register_preregister,"sccp_action_register_preregister",SKINNY_DEVICE_RS_PROGRESS,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_SPCPTOKEN_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT] = {sccp_action_register_timeout,"sccp_action_register_timeout",SKINNY_DEVICE_RS_TIMEOUT,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TOKEN_REQ] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_TIMEOUT2] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+		},
+		[SKINNY_DEVICE_RS_OK] = {
+			[SCCP_REGEV_UNREGISTER_REQ] = {sccp_action_register_unregister,"sccp_action_register_unregister",SKINNY_DEVICE_RS_NONE,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_REGISTERED] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+			[SCCP_REGEV_REGISTER_REQ] = {sccp_action_register_crossession,"sccp_action_register_crossession",SKINNY_DEVICE_RS_PROGRESS,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_SPCPTOKEN_REQ] = {sccp_action_register_crosstoken,"sccp_action_register_crosstoken",SKINNY_DEVICE_RS_PROGRESS,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TIMEOUT] = {sccp_action_register_timeout,"sccp_action_register_timeout",SKINNY_DEVICE_RS_TIMEOUT,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TOKEN_REQ] = {sccp_action_register_crosstoken,"sccp_action_register_crosstoken",SKINNY_DEVICE_RS_PROGRESS,SKINNY_DEVICE_RS_FAILED},
+			[SCCP_REGEV_TIMEOUT2] = {NULL,"no_action",SKINNY_REGISTRATIONSTATE_SENTINEL,SKINNY_REGISTRATIONSTATE_SENTINEL},
+		},
+	};
+
+	// get current state
+	sccp_session_lock(session);
+	curstate = session->registrationState;
+	sccp_session_unlock(session);
+	newstate = curstate;
+
+	struct state_transitions const *curtransition = &state_transition_table[curstate][event];
+
+	sccp_log(DEBUGCAT_NEWCODE)("%s: (sccp_fsm_registrationState) while in state:%s received event:%s\n", session->designator, skinny_registrationstate2str(curstate), skinny_registrationevent2str(event));
+
+	// execute action and transition
+	if (curtransition->newstate != SKINNY_REGISTRATIONSTATE_SENTINEL) {
+		if (curtransition->action) {
+			sccp_log(DEBUGCAT_NEWCODE)("%s: (sccp_fsm_registrationState) executing action: %s on device:%s with curstate:%s\n", session->designator, curtransition->action_name, session->designator, skinny_registrationstate2str(curstate));
+			if (curtransition->action(session, event, eventData)) {
+				newstate = curtransition->newstate;
+			} else {
+				newstate = curtransition->failstate;
+				pbx_log(LOG_WARNING, "%s: (sccp_fsm_registrationState) action: %s returned FALSE\n", session->designator, curtransition->action_name);
+			}
+		} else {
+			if (curtransition->newstate) {
+				newstate = curtransition->newstate;
+			} else {
+				newstate = curstate;
+			}
+		}
+
+		// set new state
+		sccp_session_lock(session);
+		session->registrationState = newstate;
+		sccp_session_unlock(session);
+		sccp_log(DEBUGCAT_NEWCODE)("%s: (sccp_fsm_registrationState) state:%s + event: %s -> action: %s => newstate: %s\n", session->designator, skinny_registrationstate2str(curstate), skinny_registrationevent2str(event), curtransition->action_name,  skinny_registrationstate2str(newstate));
+	} else {
+		pbx_log(LOG_NOTICE, "%s: (sccp_fsm_registrationState) action: %s ignored\n", session->designator, curtransition->action_name);
+	}
+
+	return newstate;
+}
+
+/**FSM_END*/
 
 /*!
  * \brief Find session for device

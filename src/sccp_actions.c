@@ -202,6 +202,26 @@ void sccp_handle_LocationInfoMessage(constSessionPtr s, devicePtr d, constMessag
         }
 }
 
+void sccp_handle_registrationState(constSessionPtr s, devicePtr no_d, constMessagePtr msg_in)
+{
+	sccp_fsm_event_data_t eventData = {0};
+	eventData.dataSize = sizeof(msg_in);
+	eventData.dataPtr = (void *)msg_in;
+	eventData.destructor = NULL;
+	
+	skinny_registrationstate_t event = SCCP_REGEV_NULL;
+	
+	switch(letohl(msg_in->header.lel_messageId)) {
+		case RegisterTokenRequest: event = SCCP_REGEV_TOKEN_REQ; break;
+		case SPCPRegisterTokenRequest: event = SCCP_REGEV_SPCPTOKEN_REQ; break;
+		case RegisterMessage: event = SCCP_REGEV_REGISTER_REQ; break;
+		case UnregisterMessage: event = SCCP_REGEV_UNREGISTER_REQ; break;
+	}
+	
+	sccp_fsm_registrationState(s, event, &eventData);
+}
+
+
 /*!
  * \brief Handle Token Request
  *
@@ -1983,6 +2003,9 @@ void sccp_handle_capabilities_res(constSessionPtr s, devicePtr d, constMessagePt
 	char cap_buf[512];
 	sccp_multiple_codecs2str(cap_buf, sizeof(cap_buf) - 1, d->capabilities.audio, ARRAY_LEN(d->capabilities.audio));
 	sccp_log((DEBUGCAT_DEVICE)) (VERBOSE_PREFIX_1 "%s: num of codecs %d, capabilities: %s\n", DEV_ID_LOG(d), (int) ARRAY_LEN(d->capabilities.audio), cap_buf);
+
+	sccp_fsm_event_data_t eventData = {sizeof(msg_in), (void *)msg_in, NULL};
+	sccp_fsm_registrationState(s, SCCP_REGEV_REGISTERED, &eventData);
 }
 
 /*!

@@ -525,64 +525,6 @@ int sccp_device_setRegistrationState(constDevicePtr d, const skinny_registration
 	return changed;
 }
 
-static const boolean_t sccp_action_register_preregister(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-	return FALSE;
-}
-
-static const boolean_t sccp_action_register_token(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-	return FALSE;
-}
-
-static const boolean_t sccp_action_register_timeout(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-	return FALSE;
-}
-
-static const boolean_t sccp_action_register_register(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-	return FALSE;
-}
-
-static const boolean_t sccp_action_register_crossession(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-	return FALSE;
-}
-
-static const boolean_t sccp_action_register_crosstoken(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-	return FALSE;
-}
-
-static const boolean_t sccp_action_register_unregister(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-	return FALSE;
-}
-
-static const boolean_t sccp_action_register_cleanup(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData) {
-        return FALSE;
-}
-
-/*FSM**
-name:registrationState
-type:skinny_registrationstate
-signature:(constSessionPtr session, devicePtr device, skinny_registrationstate_t event, sccp_fsm_event_data_t *eventData)
-action_signature:(constSessionPtr session, devicePtr device, sccp_fsm_event_data_t *eventData)
-action_parameters:(session, device, eventData)
-#STATE				| EVENT			| ACTION				| NEW_STATE			| FAIL
-#--------------------------------------------------------------------------------------------------------------------------------------------------------
-INITIAL				| -			| -					| SKINNY_DEVICE_RS_NONE		|
-SKINNY_DEVICE_RS_FAILED		| -			| -					| SKINNY_DEVICE_RS_NONE		|
-SKINNY_DEVICE_RS_TIMEOUT	| TIMEOUT2		| sccp_action_register_cleanup		| SKINNY_DEVICE_RS_NONE		|
-SKINNY_DEVICE_RS_TIMEOUT	| TOKEN_REQ		| sccp_action_register_crosstoken	| SKINNY_DEVICE_RS_PROGRESS	|
-SKINNY_DEVICE_RS_TIMEOUT	| REGISTER_REQ		| sccp_action_register_crossession	| SKINNY_DEVICE_RS_PROGRESS	|
-SKINNY_DEVICE_RS_NONE		| TOKEN_REQ		| sccp_action_register_token		| SKINNY_DEVICE_RS_TOKEN	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_NONE		| REGISTER_REQ		| sccp_action_register_preregister	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_TOKEN		| TIMEOUT		| sccp_action_register_timeout		| SKINNY_DEVICE_RS_TIMEOUT	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_TOKEN		| REGISTER_REQ		| sccp_action_register_preregister	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_PROGRESS	| TIMEOUT		| sccp_action_register_timeout		| SKINNY_DEVICE_RS_TIMEOUT	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_PROGRESS	| REGISTERED		| sccp_action_register_register		| SKINNY_DEVICE_RS_OK		| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_OK		| TIMEOUT		| sccp_action_register_timeout		| SKINNY_DEVICE_RS_TIMEOUT	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_OK		| TOKEN_REQ		| sccp_action_register_crosstoken	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_OK		| REGISTER_REQ		| sccp_action_register_crossession	| SKINNY_DEVICE_RS_PROGRESS	| SKINNY_DEVICE_RS_FAILED
-SKINNY_DEVICE_RS_OK		| UNREGISTER_REQ	| sccp_action_register_unregister	| SKINNY_DEVICE_RS_NONE		| SKINNY_DEVICE_RS_FAILED
-END_FSM_TABLE
-**FSM_END*/
-
 /* ======================================================================================================== end getters / setters for privateData */
 
 /*!

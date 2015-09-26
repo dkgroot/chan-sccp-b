@@ -3065,7 +3065,8 @@ static const char *skinny_registrationstate_map[] = {
 	[SKINNY_DEVICE_RS_FAILED] = "Failed",
 	[SKINNY_DEVICE_RS_TIMEOUT] = "Time Out",
 	[SKINNY_DEVICE_RS_NONE] = "None",
-	[SKINNY_DEVICE_RS_TOKEN] = "Token",
+	[SKINNY_DEVICE_RS_TOKEN] = "SCCP Token",
+	[SKINNY_DEVICE_RS_SPCPTOKEN] = "SPCP Token",
 	[SKINNY_DEVICE_RS_PROGRESS] = "Progress",
 	[SKINNY_DEVICE_RS_OK] = "OK",
 	[SKINNY_REGISTRATIONSTATE_SENTINEL] = "LOOKUPERROR"
@@ -3103,10 +3104,66 @@ int skinny_registrationstate_str2intval(const char *lookup_str) {
 }
 
 char *skinny_registrationstate_all_entries(void) {
-	static char res[] = "Failed,Time Out,None,Token,Progress,OK";
+	static char res[] = "Failed,Time Out,None,SCCP Token,SPCP Token,Progress,OK";
 	return res;
 }
 /* = End =========================================================================================       skinny_registrationstate === */
+
+
+/* = Begin =======================================================================================       skinny_registrationevent === */
+
+
+/*
+ * \brief enum skinny_registrationevent
+ */
+static const char *skinny_registrationevent_map[] = {
+	[SCCP_REGEV_NULL] = "null",
+	[SCCP_REGEV_TOKEN_REQ] = "token req",
+	[SCCP_REGEV_SPCPTOKEN_REQ] = "spcp token req",
+	[SCCP_REGEV_REGISTER_REQ] = "register req",
+	[SCCP_REGEV_UNREGISTER_REQ] = "unregister req",
+	[SCCP_REGEV_REGISTERED] = "registered",
+	[SCCP_REGEV_TIMEOUT] = "timeout",
+	[SCCP_REGEV_TIMEOUT2] = "timeout2",
+	[SKINNY_REGISTRATIONEVENT_SENTINEL] = "LOOKUPERROR"
+};
+
+int skinny_registrationevent_exists(int skinny_registrationevent_int_value) {
+	if ((SCCP_REGEV_TOKEN_REQ <=skinny_registrationevent_int_value) && (skinny_registrationevent_int_value < SKINNY_REGISTRATIONEVENT_SENTINEL )) {
+		return 1;
+	}
+	return 0;
+}
+
+const char * skinny_registrationevent2str(skinny_registrationevent_t enum_value) {
+	if ((SCCP_REGEV_NULL <= enum_value) && (enum_value <= SKINNY_REGISTRATIONEVENT_SENTINEL)) {
+		return skinny_registrationevent_map[enum_value];
+	}
+	pbx_log(LOG_ERROR, "SCCP: Error during lookup of '%d' in skinny_registrationevent2str\n", enum_value);
+	return "SCCP: OutOfBounds Error during lookup of skinny_registrationevent2str\n";
+}
+
+skinny_registrationevent_t skinny_registrationevent_str2val(const char *lookup_str) {
+	uint32_t idx;
+	for (idx = 0; idx < ARRAY_LEN(skinny_registrationevent_map); idx++) {
+		if (sccp_strcaseequals(skinny_registrationevent_map[idx], lookup_str)) {
+			return idx;
+		}
+	}
+	pbx_log(LOG_ERROR, "SCCP: LOOKUP ERROR, skinny_registrationevent_str2val(%s) not found\n", lookup_str);
+	return SKINNY_REGISTRATIONEVENT_SENTINEL;
+}
+
+int skinny_registrationevent_str2intval(const char *lookup_str) {
+	int res = skinny_registrationevent_str2val(lookup_str);
+	return (int)res != SKINNY_REGISTRATIONEVENT_SENTINEL ? res : -1;
+}
+
+char *skinny_registrationevent_all_entries(void) {
+	static char res[] = "null,token req,spcp token req,register req,unregister req,registered,timeout,timeout2";
+	return res;
+}
+/* = End =========================================================================================       skinny_registrationevent === */
 
 
 /* = Begin =======================================================================================             skinny_mediastatus === */

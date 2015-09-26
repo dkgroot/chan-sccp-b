@@ -18,6 +18,7 @@
 void sccp_handle_unknown_message(constSessionPtr s, devicePtr d, constMessagePtr msg_in);
 void sccp_handle_dialedphonebook_message(constSessionPtr s, devicePtr d, constMessagePtr msg_in);
 void sccp_handle_alarm(constSessionPtr s, devicePtr d, constMessagePtr msg_in);
+void sccp_handle_registrationState(constSessionPtr s, devicePtr d, constMessagePtr msg_in);
 void sccp_handle_token_request(constSessionPtr s, devicePtr d, constMessagePtr msg_in);
 void sccp_handle_register(constSessionPtr s, devicePtr d, constMessagePtr msg_in);
 void sccp_handle_SPCPTokenReq(constSessionPtr s, devicePtr d, constMessagePtr msg_in);
