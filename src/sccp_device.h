@@ -393,6 +393,7 @@ const sccp_devicestate_t sccp_device_getDeviceState(constDevicePtr d);
 int sccp_device_setDeviceState(constDevicePtr d, const sccp_devicestate_t state);
 const skinny_registrationstate_t sccp_device_getRegistrationState(constDevicePtr d);
 int sccp_device_setRegistrationState(constDevicePtr d, const skinny_registrationstate_t state);
+const skinny_registrationstate_t sccp_fsm_registrationState(constSessionPtr session, devicePtr device, skinny_registrationstate_t event, sccp_fsm_event_data_t *eventData);
 /* ======================================================================================================== end getters / setters for privateData */
 
 /* live cycle */

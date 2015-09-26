@@ -311,6 +311,15 @@ static const struct sccp_debug_category {
 	/* *INDENT-ON* */
 };
 
+/*!
+ * \brief Finistate Machine Event Data
+ */
+struct sccp_fsm_event_data {
+	/*sccp_event_t event;*/
+	size_t dataSize;
+	void *dataPtr;
+	void (*destructor) (sccp_fsm_event_data_t *ptr);
+};
 
 /*!
  * \brief Privacy Definition
