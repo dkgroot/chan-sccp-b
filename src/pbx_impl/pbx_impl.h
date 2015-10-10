@@ -89,12 +89,11 @@ typedef struct _PbxInterface {
 	int (*const rtp_setPhoneAddress) (const struct sccp_rtp * rtp, const struct sockaddr_storage * new_peer, int nat_active);
 	boolean_t(*const rtp_setWriteFormat) (constChannelPtr channel, skinny_codec_t codec);
 	boolean_t(*const rtp_setReadFormat) (constChannelPtr channel, skinny_codec_t codec);
-	boolean_t(*const rtp_destroy) (PBX_RTP_TYPE * rtp);
+	PBX_RTP_TYPE * (*const rtp_createServer) (constChannelPtr channel, sccp_rtp_type_t type); /* new */
+	PBX_RTP_TYPE * (*const rtp_destroyServer) (PBX_RTP_TYPE * rtp);	/* new */
 	void (*const rtp_stop) (PBX_RTP_TYPE *rtp);
 	int (*const rtp_codec) (sccp_channel_t * channel);
-	boolean_t(*const rtp_audio_create) (sccp_channel_t * channel);
-	boolean_t(*const rtp_video_create) (sccp_channel_t * channel);
-	uint8_t(*const rtp_get_payloadType) (const struct sccp_rtp * rtp, skinny_codec_t codec);
+	uint8_t(*const rtp_getPayloadType) (const sccp_rtp_new_t * rtp, skinny_codec_t codec); /* new */
 	int(*const rtp_get_sampleRate) (skinny_codec_t codec);
 	uint8_t(*const rtp_bridgePeers) (PBX_CHANNEL_TYPE * c0, PBX_CHANNEL_TYPE * c1, int flags, struct ast_frame ** fo, PBX_CHANNEL_TYPE ** rc, int timeoutms);
 

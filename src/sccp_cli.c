@@ -1387,8 +1387,11 @@ static int sccp_show_channels(int fd, sccp_cli_totals_t *totals, struct mansessi
 			} else {												\
 				snprintf(tmpname, sizeof(tmpname), "SCCP/%s-%08x", l->name, channel->callid);			\
 			}													\
-			if (&channel->rtp) {											\
-				sccp_copy_string(addrStr,sccp_socket_stringify(&channel->rtp.audio.phone), sizeof(addrStr));	\
+			sccp_rtp_new_t *audiortp = sccp_channel_getRtp(channel, SCCP_RTP_AUDIO);					\
+			if (audiortp) {												\
+				struct sockaddr_storage sas;									\
+				sccp_rtp_getPeer(audiortp, &sas);								\
+				sccp_copy_string(addrStr,sccp_socket_stringify(&sas), sizeof(addrStr));				\
 			}
 
 #define CLI_AMI_TABLE_AFTER_ITERATION 												\
@@ -1403,10 +1406,10 @@ static int sccp_show_channels(int fd, sccp_cli_totals_t *totals, struct mansessi
 		CLI_AMI_TABLE_FIELD(NumCalled,		"-10.10",	s,	10,	channel->dialedNumber)			\
 		CLI_AMI_TABLE_FIELD(PBX State,		"-10.10",	s,	10,	(channel->owner) ? pbx_state2str(iPbx.getChannelState(channel)) : "(none)")	\
 		CLI_AMI_TABLE_FIELD(SCCP State,		"-10.10",	s,	10,	sccp_channelstate2str(channel->state))			\
-		CLI_AMI_TABLE_FIELD(ReadCodec,		"-10.10",	s,	10,	codec2name(channel->rtp.audio.readFormat))		\
-		CLI_AMI_TABLE_FIELD(WriteCodec,		"-10.10",	s,	10,	codec2name(channel->rtp.audio.writeFormat))		\
+		CLI_AMI_TABLE_FIELD(ReadCodec,		"-10.10",	s,	10,	audiortp ? codec2name(sccp_rtp_getReadFormat(audiortp)) : "--")		\
+		CLI_AMI_TABLE_FIELD(WriteCodec,		"-10.10",	s,	10,	audiortp ? codec2name(sccp_rtp_getWriteFormat(audiortp)) : "--")         \
 		CLI_AMI_TABLE_FIELD(RTPPeer,		"22.22",	s,	22,	addrStr)						\
-		CLI_AMI_TABLE_FIELD(Direct,		"-6.6",		s,	6,	channel->rtp.audio.directMedia ? "yes" : "no")		\
+		CLI_AMI_TABLE_FIELD(Direct,		"-6.6",		s,	6,	audiortp ? (sccp_rtp_isDirectMedia(audiortp) ? "yes" : "no") : "--")		\
 		CLI_AMI_TABLE_FIELD(DTMFmode,		"-8.8",		s,	8,	sccp_dtmfmode2str(channel->dtmfmode))
 #include "sccp_cli_table.h"
 

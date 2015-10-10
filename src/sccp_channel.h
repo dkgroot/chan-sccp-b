@@ -153,6 +153,12 @@ void sccp_channel_set_calleridPresentation(sccp_channel_t * c, sccp_callerid_pre
 void sccp_channel_connect(sccp_channel_t * c);
 void sccp_channel_disconnect(sccp_channel_t * c);
 
+sccp_rtp_new_t *sccp_channel_getRtp(constChannelPtr c, sccp_rtp_type_t type);
+PBX_RTP_TYPE *sccp_channel_getPbxRtp(constChannelPtr c, sccp_rtp_type_t type);
+uint16_t sccp_channel_getRtpReadState(constChannelPtr c, sccp_rtp_type_t type);
+uint16_t sccp_channel_getRtpWriteState(constChannelPtr c, sccp_rtp_type_t type);
+void sccp_channel_stopAllRtp(constChannelPtr c);
+
 void sccp_channel_openReceiveChannel(constChannelPtr c);
 void sccp_channel_closeReceiveChannel(constChannelPtr c, boolean_t KeepPortOpen);
 void sccp_channel_updateReceiveChannel(constChannelPtr c);

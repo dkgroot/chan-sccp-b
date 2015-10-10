@@ -187,7 +187,7 @@ void sccp_feat_handle_callforward(constLinePtr l, constDevicePtr device, sccp_ca
 
 	iPbx.set_callstate(c, AST_STATE_OFFHOOK);
 
-	if (device->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !c->rtp.audio.rtp) {
+	if (device->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !sccp_channel_getRtpWriteState(c, SCCP_RTP_AUDIO)) {
 		sccp_channel_openReceiveChannel(c);
 	}
 }
@@ -258,7 +258,7 @@ void sccp_feat_handle_directed_pickup(constLinePtr l, uint8_t lineInstance, cons
 
 	iPbx.set_callstate(c, AST_STATE_OFFHOOK);
 
-	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !c->rtp.audio.rtp) {
+	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !sccp_channel_getRtpWriteState(c, SCCP_RTP_AUDIO)) {
 		sccp_channel_openReceiveChannel(c);
 	}
 }
@@ -404,7 +404,7 @@ int sccp_feat_directed_pickup(channelPtr c, const char *exten)
 			if (!res) {
 				/* directed pickup succeeded */
 				sccp_log((DEBUGCAT_FEATURE)) (VERBOSE_PREFIX_3 "%s: (directed_pickup) pickup succeeded on call: %s\n", DEV_ID_LOG(d), c->designator);
-				sccp_rtp_stop(c);								/* stop previous audio */
+				sccp_channel_stopAllRtp(c);							/* stop previous audio */
 				pbx_channel_set_hangupcause(original, AST_CAUSE_ANSWERED_ELSEWHERE);
 				if (orig_device && orig_channel) {
 					//sccp_log((DEBUGCAT_FEATURE)) (VERBOSE_PREFIX_3 "%s: (directed_pickup) hangup: %s\n", DEV_ID_LOG(orig_device), orig_channel->designator);
@@ -581,7 +581,7 @@ int sccp_feat_grouppickup(constLinePtr l, constDevicePtr d)
 	if (!res) {
 		/* gpickup succeeded */
 		sccp_log((DEBUGCAT_FEATURE)) (VERBOSE_PREFIX_3 "%s: (grouppickup) pickup succeeded on callid: %d\n", DEV_ID_LOG(d), c->callid);
-		sccp_rtp_stop(c);										/* stop previous audio */
+		sccp_channel_stopAllRtp(c);									/* stop previous audio */
 		pbx_channel_set_hangupcause(dest, AST_CAUSE_ANSWERED_ELSEWHERE);
 		pbx_hangup(dest);										/* hangup masqueraded zombie channel */
 
@@ -1055,7 +1055,7 @@ void sccp_feat_handle_meetme(constLinePtr l, uint8_t lineInstance, constDevicePt
 
 	iPbx.set_callstate(c, AST_STATE_OFFHOOK);
 
-	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !c->rtp.audio.rtp) {
+	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !sccp_channel_getRtpWriteState(c, SCCP_RTP_AUDIO)) {
 		sccp_channel_openReceiveChannel(c);
 	}
 
@@ -1258,7 +1258,7 @@ void sccp_feat_handle_barge(constLinePtr l, uint8_t lineInstance, constDevicePtr
 
 	iPbx.set_callstate(c, AST_STATE_OFFHOOK);
 
-	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !c->rtp.audio.rtp) {
+	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !sccp_channel_getRtpWriteState(c, SCCP_RTP_AUDIO)) {
 		sccp_channel_openReceiveChannel(c);
 	}
 }
@@ -1353,7 +1353,7 @@ void sccp_feat_handle_cbarge(constLinePtr l, uint8_t lineInstance, constDevicePt
 
 	iPbx.set_callstate(c, AST_STATE_OFFHOOK);
 
-	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !c->rtp.audio.rtp) {
+	if (d->earlyrtp <= SCCP_EARLYRTP_OFFHOOK && !sccp_channel_getRtpWriteState(c, SCCP_RTP_AUDIO)) {
 		sccp_channel_openReceiveChannel(c);
 	}
 }

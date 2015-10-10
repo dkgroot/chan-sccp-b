@@ -104,11 +104,12 @@ static void sccp_sk_videomode(const sccp_softkeyMap_cb_t * const softkeyMap_cb, 
 #ifdef CS_SCCP_VIDEO
 	if (sccp_device_isVideoSupported(d)) {
 		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: We can have video, try to start vrtp\n", DEV_ID_LOG(d));
-		if (!c->rtp.video.rtp && !sccp_rtp_createVideoServer(c)) {
-			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: can not start vrtp\n", DEV_ID_LOG(d));
-		} else {
+		sccp_rtp_new_t *videortp = sccp_channel_getRtp(c, SCCP_RTP_VIDEO);
+		if (videortp || (videortp = sccp_rtp_ctor(c, SCCP_RTP_VIDEO))) {
 			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: vrtp started\n", DEV_ID_LOG(d));
 			sccp_channel_startMultiMediaTransmission(c);
+		} else {
+			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: can not start vrtp\n", DEV_ID_LOG(d));
 		}
 	}
 #endif
