@@ -511,13 +511,15 @@ static void sccp_protocol_sendRegisterAckV11(constDevicePtr device, uint8_t keep
  */
 static void sccp_protocol_sendOpenReceiveChannelV3(constDevicePtr device, constChannelPtr channel)
 {
+	sccp_rtp_new_t *audiortp = sccp_channel_getRtp(channel, SCCP_RTP_AUDIO);
 	int packetSize = 20;											/*! \todo calculate packetSize */
 	sccp_msg_t *msg = sccp_build_packet(OpenReceiveChannel, sizeof(msg->data.OpenReceiveChannel.v3));
 
 	msg->data.OpenReceiveChannel.v3.lel_conferenceId = htolel(channel->callid);
 	msg->data.OpenReceiveChannel.v3.lel_passThruPartyId = htolel(channel->passthrupartyid);
 	msg->data.OpenReceiveChannel.v3.lel_millisecondPacketSize = htolel(packetSize);
-	msg->data.OpenReceiveChannel.v3.lel_payloadType = htolel(channel->rtp.audio.writeFormat);
+	//msg->data.OpenReceiveChannel.v3.lel_payloadType = htolel(channel->rtp.audio.writeFormat);
+	msg->data.OpenReceiveChannel.v3.lel_payloadType = htolel(sccp_rtp_getWriteFormat(audiortp));
 	msg->data.OpenReceiveChannel.v3.lel_vadValue = htolel(channel->line->echocancel);
 	msg->data.OpenReceiveChannel.v3.lel_callReference = htolel(channel->callid);
 	//msg->data.OpenReceiveChannel.v3.lel_remotePortNumber = htolel(4000);
@@ -531,7 +533,8 @@ static void sccp_protocol_sendOpenReceiveChannelV3(constDevicePtr device, constC
 	/* Source Ip Address */
 	struct sockaddr_storage sas;
 
-	memcpy(&sas, &channel->rtp.audio.phone_remote, sizeof(struct sockaddr_storage));
+	//memcpy(&sas, &channel->rtp.audio.phone_remote, sizeof(struct sockaddr_storage));
+	sccp_rtp_getRemotePhoneAddress(audiortp, &sas);
 	sccp_socket_ipv4_mapped(&sas, &sas);
 
 	struct sockaddr_in *in = (struct sockaddr_in *) &sas;
@@ -547,13 +550,15 @@ static void sccp_protocol_sendOpenReceiveChannelV3(constDevicePtr device, constC
  */
 static void sccp_protocol_sendOpenReceiveChannelV17(constDevicePtr device, constChannelPtr channel)
 {
+	sccp_rtp_new_t *audiortp = sccp_channel_getRtp(channel, SCCP_RTP_AUDIO);
 	int packetSize = 20;											/*! \todo calculate packetSize */
 	sccp_msg_t *msg = sccp_build_packet(OpenReceiveChannel, sizeof(msg->data.OpenReceiveChannel.v17));
 
 	msg->data.OpenReceiveChannel.v17.lel_conferenceId = htolel(channel->callid);
 	msg->data.OpenReceiveChannel.v17.lel_passThruPartyId = htolel(channel->passthrupartyid);
 	msg->data.OpenReceiveChannel.v17.lel_millisecondPacketSize = htolel(packetSize);
-	msg->data.OpenReceiveChannel.v17.lel_payloadType = htolel(channel->rtp.audio.writeFormat);
+	//msg->data.OpenReceiveChannel.v17.lel_payloadType = htolel(channel->rtp.audio.writeFormat);
+	msg->data.OpenReceiveChannel.v17.lel_payloadType = htolel(sccp_rtp_getWriteFormat(audiortp));
 	msg->data.OpenReceiveChannel.v17.lel_vadValue = htolel(channel->line->echocancel);
 	msg->data.OpenReceiveChannel.v17.lel_callReference = htolel(channel->callid);
 	if (SCCP_DTMFMODE_SKINNY == channel->dtmfmode) {
@@ -566,8 +571,8 @@ static void sccp_protocol_sendOpenReceiveChannelV17(constDevicePtr device, const
 	/* Source Ip Address */
 	struct sockaddr_storage sas;
 
-	//memcpy(&sas, &device->session->sin, sizeof(struct sockaddr_storage));
-	memcpy(&sas, &channel->rtp.audio.phone_remote, sizeof(struct sockaddr_storage));
+	//memcpy(&sas, &channel->rtp.audio.phone_remote, sizeof(struct sockaddr_storage));
+	sccp_rtp_getRemotePhoneAddress(audiortp, &sas);
 	sccp_socket_ipv4_mapped(&sas, &sas);
 
 	if (sas.ss_family == AF_INET6) {
@@ -590,13 +595,15 @@ static void sccp_protocol_sendOpenReceiveChannelV17(constDevicePtr device, const
  */
 static void sccp_protocol_sendOpenReceiveChannelv22(constDevicePtr device, constChannelPtr channel)
 {
+	sccp_rtp_new_t *audiortp = sccp_channel_getRtp(channel, SCCP_RTP_AUDIO);
 	int packetSize = 20;											/*! \todo calculate packetSize */
 	sccp_msg_t *msg = sccp_build_packet(OpenReceiveChannel, sizeof(msg->data.OpenReceiveChannel.v22));
 
 	msg->data.OpenReceiveChannel.v22.lel_conferenceId = htolel(channel->callid);
 	msg->data.OpenReceiveChannel.v22.lel_passThruPartyId = htolel(channel->passthrupartyid);
 	msg->data.OpenReceiveChannel.v22.lel_millisecondPacketSize = htolel(packetSize);
-	msg->data.OpenReceiveChannel.v22.lel_payloadType = htolel(channel->rtp.audio.writeFormat);
+	//msg->data.OpenReceiveChannel.v22.lel_payloadType = htolel(channel->rtp.audio.writeFormat);
+	msg->data.OpenReceiveChannel.v22.lel_payloadType = htolel(sccp_rtp_getWriteFormat(audiortp));
 	msg->data.OpenReceiveChannel.v22.lel_vadValue = htolel(channel->line->echocancel);
 	msg->data.OpenReceiveChannel.v22.lel_callReference = htolel(channel->callid);
 	if (SCCP_DTMFMODE_SKINNY == channel->dtmfmode) {
@@ -609,8 +616,8 @@ static void sccp_protocol_sendOpenReceiveChannelv22(constDevicePtr device, const
 	/* Source Ip Address */
 	struct sockaddr_storage sas;
 
-	//memcpy(&sas, &device->session->sin, sizeof(struct sockaddr_storage));
-	memcpy(&sas, &channel->rtp.audio.phone_remote, sizeof(struct sockaddr_storage));
+	//memcpy(&sas, &channel->rtp.audio.phone_remote, sizeof(struct sockaddr_storage));
+	sccp_rtp_getRemotePhoneAddress(audiortp, &sas);
 	sccp_socket_ipv4_mapped(&sas, &sas);
 
 	if (sas.ss_family == AF_INET6) {
@@ -633,6 +640,7 @@ static void sccp_protocol_sendOpenReceiveChannelv22(constDevicePtr device, const
  */
 static void sccp_protocol_sendOpenMultiMediaChannelV3(constDevicePtr device, constChannelPtr channel, uint32_t skinnyFormat, int payloadType, uint8_t lineInstance, int bitRate)
 {
+	//sccp_rtp_new_t *videortp = sccp_channel_getRtp(channel, SCCP_RTP_VIDEO);
 	sccp_msg_t *msg = sccp_build_packet(OpenMultiMediaChannelMessage, sizeof(msg->data.OpenMultiMediaChannelMessage.v3));
 
 	msg->data.OpenMultiMediaChannelMessage.v3.lel_conferenceID = htolel(channel->callid);
@@ -661,6 +669,7 @@ static void sccp_protocol_sendOpenMultiMediaChannelV3(constDevicePtr device, con
  */
 static void sccp_protocol_sendOpenMultiMediaChannelV17(constDevicePtr device, constChannelPtr channel, uint32_t skinnyFormat, int payloadType, uint8_t lineInstance, int bitRate)
 {
+	//sccp_rtp_new_t *videortp = sccp_channel_getRtp(channel, SCCP_RTP_VIDEO);
 	sccp_msg_t *msg = sccp_build_packet(OpenMultiMediaChannelMessage, sizeof(msg->data.OpenMultiMediaChannelMessage.v17));
 
 	msg->data.OpenMultiMediaChannelMessage.v17.lel_conferenceID = htolel(channel->callid);
@@ -697,6 +706,7 @@ static void sccp_protocol_sendOpenMultiMediaChannelV17(constDevicePtr device, co
  */
 static void sccp_protocol_sendStartMediaTransmissionV3(constDevicePtr device, constChannelPtr channel)
 {
+	sccp_rtp_new_t *audiortp = sccp_channel_getRtp(channel, SCCP_RTP_AUDIO);
 	sccp_msg_t *msg = sccp_build_packet(StartMediaTransmission, sizeof(msg->data.StartMediaTransmission.v3));
 	int packetSize = 20;											/*! \todo calculate packetSize */
 
@@ -704,7 +714,8 @@ static void sccp_protocol_sendStartMediaTransmissionV3(constDevicePtr device, co
 	msg->data.StartMediaTransmission.v3.lel_passThruPartyId = htolel(channel->passthrupartyid);
 	msg->data.StartMediaTransmission.v3.lel_callReference = htolel(channel->callid);
 	msg->data.StartMediaTransmission.v3.lel_millisecondPacketSize = htolel(packetSize);
-	msg->data.StartMediaTransmission.v3.lel_payloadType = htolel(channel->rtp.audio.readFormat);
+	//msg->data.StartMediaTransmission.v3.lel_payloadType = htolel(channel->rtp.audio.readFormat);
+	msg->data.StartMediaTransmission.v3.lel_payloadType = htolel(sccp_rtp_getReadFormat(audiortp));
 	msg->data.StartMediaTransmission.v3.lel_precedenceValue = htolel((uint32_t)device->audio_tos);
 	msg->data.StartMediaTransmission.v3.lel_ssValue = htolel(channel->line->silencesuppression);		// Silence supression
 	msg->data.StartMediaTransmission.v3.lel_maxFramesPerPacket = htolel(0);
@@ -715,14 +726,17 @@ static void sccp_protocol_sendStartMediaTransmissionV3(constDevicePtr device, co
 	}
 	msg->data.StartMediaTransmission.v3.lel_dtmfType = htolel(10);;
 
-	if (channel->rtp.audio.phone_remote.ss_family == AF_INET) {
-		struct sockaddr_in *in = (struct sockaddr_in *) &channel->rtp.audio.phone_remote;
+	struct sockaddr_storage sas;
+	sccp_rtp_getRemotePhoneAddress(audiortp, &sas);
+
+	if (sas.ss_family == AF_INET) {
+		struct sockaddr_in *in = (struct sockaddr_in *) &sas;
 
 		memcpy(&msg->data.StartMediaTransmission.v3.bel_remoteIpAddr, &in->sin_addr, 4);
 	} else {
 		/* \todo add warning */
 	}
-	msg->data.StartMediaTransmission.v3.lel_remotePortNumber = htolel(sccp_socket_getPort(&channel->rtp.audio.phone_remote));
+	msg->data.StartMediaTransmission.v3.lel_remotePortNumber = htolel(sccp_socket_getPort(&sas));
 
 	sccp_dev_send(device, msg);
 }
@@ -732,6 +746,7 @@ static void sccp_protocol_sendStartMediaTransmissionV3(constDevicePtr device, co
  */
 static void sccp_protocol_sendStartMediaTransmissionV17(constDevicePtr device, constChannelPtr channel)
 {
+	sccp_rtp_new_t *audiortp = sccp_channel_getRtp(channel, SCCP_RTP_AUDIO);
 	sccp_msg_t *msg = sccp_build_packet(StartMediaTransmission, sizeof(msg->data.StartMediaTransmission.v17));
 	int packetSize = 20;											/*! \todo calculate packetSize */
 
@@ -739,7 +754,8 @@ static void sccp_protocol_sendStartMediaTransmissionV17(constDevicePtr device, c
 	msg->data.StartMediaTransmission.v17.lel_passThruPartyId = htolel(channel->passthrupartyid);
 	msg->data.StartMediaTransmission.v17.lel_callReference = htolel(channel->callid);
 	msg->data.StartMediaTransmission.v17.lel_millisecondPacketSize = htolel(packetSize);
-	msg->data.StartMediaTransmission.v17.lel_payloadType = htolel(channel->rtp.audio.readFormat);
+	//msg->data.StartMediaTransmission.v17.lel_payloadType = htolel(channel->rtp.audio.readFormat);
+	msg->data.StartMediaTransmission.v17.lel_payloadType = htolel(sccp_rtp_getReadFormat(audiortp));
 	msg->data.StartMediaTransmission.v17.lel_precedenceValue = htolel((uint32_t)device->audio_tos);
 	msg->data.StartMediaTransmission.v17.lel_ssValue = htolel(channel->line->silencesuppression);		// Silence supression
 	msg->data.StartMediaTransmission.v17.lel_maxFramesPerPacket = htolel(0);
@@ -750,17 +766,20 @@ static void sccp_protocol_sendStartMediaTransmissionV17(constDevicePtr device, c
 	}
 	msg->data.StartMediaTransmission.v17.lel_dtmfType = htolel(10);;
 
-	if (channel->rtp.audio.phone_remote.ss_family == AF_INET6) {
-		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) &channel->rtp.audio.phone_remote;
+	struct sockaddr_storage sas;
+	sccp_rtp_getRemotePhoneAddress(audiortp, &sas);
+	
+	if (sas.ss_family == AF_INET6) {
+		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) &sas;
 
 		memcpy(&msg->data.StartMediaTransmission.v17.bel_remoteIpAddr, &in6->sin6_addr, 16);
 		msg->data.StartMediaTransmission.v17.lel_ipv46 = htolel(1);
 	} else {
-		struct sockaddr_in *in = (struct sockaddr_in *) &channel->rtp.audio.phone_remote;
+		struct sockaddr_in *in = (struct sockaddr_in *) &sas;
 
 		memcpy(&msg->data.StartMediaTransmission.v17.bel_remoteIpAddr, &in->sin_addr, 4);
 	}
-	msg->data.StartMediaTransmission.v17.lel_remotePortNumber = htolel(sccp_socket_getPort(&channel->rtp.audio.phone_remote));
+	msg->data.StartMediaTransmission.v17.lel_remotePortNumber = htolel(sccp_socket_getPort(&sas));
 	sccp_dev_send(device, msg);
 }
 
@@ -769,6 +788,7 @@ static void sccp_protocol_sendStartMediaTransmissionV17(constDevicePtr device, c
  */
 static void sccp_protocol_sendStartMediaTransmissionv22(constDevicePtr device, constChannelPtr channel)
 {
+	sccp_rtp_new_t *audiortp = sccp_channel_getRtp(channel, SCCP_RTP_AUDIO);
 	sccp_msg_t *msg = sccp_build_packet(StartMediaTransmission, sizeof(msg->data.StartMediaTransmission.v22));
 	int packetSize = 20;											/*! \todo calculate packetSize */
 
@@ -776,7 +796,8 @@ static void sccp_protocol_sendStartMediaTransmissionv22(constDevicePtr device, c
 	msg->data.StartMediaTransmission.v22.lel_passThruPartyId = htolel(channel->passthrupartyid);
 	msg->data.StartMediaTransmission.v22.lel_callReference = htolel(channel->callid);
 	msg->data.StartMediaTransmission.v22.lel_millisecondPacketSize = htolel(packetSize);
-	msg->data.StartMediaTransmission.v22.lel_payloadType = htolel(channel->rtp.audio.readFormat);
+	//msg->data.StartMediaTransmission.v22.lel_payloadType = htolel(channel->rtp.audio.readFormat);
+	msg->data.StartMediaTransmission.v22.lel_payloadType = htolel(sccp_rtp_getReadFormat(audiortp));
 	msg->data.StartMediaTransmission.v22.lel_precedenceValue = htolel((uint32_t)device->audio_tos);
 	msg->data.StartMediaTransmission.v22.lel_ssValue = htolel(channel->line->silencesuppression);		// Silence supression
 	msg->data.StartMediaTransmission.v22.lel_maxFramesPerPacket = htolel(0);
@@ -787,17 +808,19 @@ static void sccp_protocol_sendStartMediaTransmissionv22(constDevicePtr device, c
 	}
 	msg->data.StartMediaTransmission.v22.lel_dtmfType = htolel(10);;
 
-	if (channel->rtp.audio.phone_remote.ss_family == AF_INET6) {
-		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) &channel->rtp.audio.phone_remote;
+	struct sockaddr_storage sas;
+	sccp_rtp_getRemotePhoneAddress(audiortp, &sas);
+	if (sas.ss_family == AF_INET6) {
+		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) &sas;
 
 		memcpy(&msg->data.StartMediaTransmission.v22.bel_remoteIpAddr, &in6->sin6_addr, 16);
 		msg->data.StartMediaTransmission.v22.lel_ipv46 = htolel(1);
 	} else {
-		struct sockaddr_in *in = (struct sockaddr_in *) &channel->rtp.audio.phone_remote;
+		struct sockaddr_in *in = (struct sockaddr_in *) &sas;
 
 		memcpy(&msg->data.StartMediaTransmission.v22.bel_remoteIpAddr, &in->sin_addr, 4);
 	}
-	msg->data.StartMediaTransmission.v22.lel_remotePortNumber = htolel(sccp_socket_getPort(&channel->rtp.audio.phone_remote));
+	msg->data.StartMediaTransmission.v22.lel_remotePortNumber = htolel(sccp_socket_getPort(&sas));
 	sccp_dev_send(device, msg);
 }
 
@@ -806,11 +829,13 @@ static void sccp_protocol_sendStartMediaTransmissionv22(constDevicePtr device, c
  */
 static void sccp_protocol_sendStartMultiMediaTransmissionV3(constDevicePtr device, constChannelPtr channel, int payloadType, int bitRate)
 {
+	sccp_rtp_new_t *videortp = sccp_channel_getRtp(channel, SCCP_RTP_VIDEO);
 	sccp_msg_t *msg = sccp_build_packet(StartMultiMediaTransmission, sizeof(msg->data.StartMultiMediaTransmission.v3));
 
 	msg->data.StartMultiMediaTransmission.v3.lel_conferenceID = htolel(channel->callid);
 	msg->data.StartMultiMediaTransmission.v3.lel_passThruPartyId = htolel(channel->passthrupartyid);
-	msg->data.StartMultiMediaTransmission.v3.lel_payloadCapability = htolel(channel->rtp.video.readFormat);
+	//msg->data.StartMultiMediaTransmission.v3.lel_payloadCapability = htolel(channel->rtp.video.readFormat);
+	msg->data.StartMultiMediaTransmission.v3.lel_payloadCapability = htolel(sccp_rtp_getReadFormat(videortp));
 	msg->data.StartMultiMediaTransmission.v3.lel_callReference = htolel(channel->callid);
 	msg->data.StartMultiMediaTransmission.v3.lel_payloadType = htolel(payloadType);
 	msg->data.StartMultiMediaTransmission.v3.lel_DSCPValue = htolel(136);
@@ -825,14 +850,18 @@ static void sccp_protocol_sendStartMultiMediaTransmissionV3(constDevicePtr devic
 	msg->data.StartMultiMediaTransmission.v3.videoParameter.decpicbuf = htolel(8100);
 	msg->data.StartMultiMediaTransmission.v3.videoParameter.brandcpb = htolel(10000);
 	msg->data.StartMultiMediaTransmission.v3.videoParameter.confServiceNum = htolel(channel->callid);
-	msg->data.StartMultiMediaTransmission.v3.lel_remotePortNumber = htolel(sccp_socket_getPort(&channel->rtp.video.phone_remote));
-	if (channel->rtp.video.phone_remote.ss_family == AF_INET) {
-		struct sockaddr_in *in = (struct sockaddr_in *) &channel->rtp.video.phone_remote;
+
+	struct sockaddr_storage sas;
+	sccp_rtp_getRemotePhoneAddress(videortp, &sas);
+	
+	if (sas.ss_family == AF_INET) {
+		struct sockaddr_in *in = (struct sockaddr_in *) &sas;
 
 		memcpy(&msg->data.StartMultiMediaTransmission.v3.bel_remoteIpAddr, &in->sin_addr, 4);
 	} else {
 		/* \todo add warning */
 	}
+	msg->data.StartMultiMediaTransmission.v3.lel_remotePortNumber = htolel(sccp_socket_getPort(&sas));
 
 	sccp_dev_send(device, msg);
 }
@@ -842,11 +871,13 @@ static void sccp_protocol_sendStartMultiMediaTransmissionV3(constDevicePtr devic
  */
 static void sccp_protocol_sendStartMultiMediaTransmissionV17(constDevicePtr device, constChannelPtr channel, int payloadType, int bitRate)
 {
+	sccp_rtp_new_t *videortp = sccp_channel_getRtp(channel, SCCP_RTP_VIDEO);
 	sccp_msg_t *msg = sccp_build_packet(StartMultiMediaTransmission, sizeof(msg->data.StartMultiMediaTransmission.v17));
 
 	msg->data.StartMultiMediaTransmission.v17.lel_conferenceID = htolel(channel->callid);
 	msg->data.StartMultiMediaTransmission.v17.lel_passThruPartyId = htolel(channel->passthrupartyid);
-	msg->data.StartMultiMediaTransmission.v17.lel_payloadCapability = htolel(channel->rtp.video.readFormat);
+	//msg->data.StartMultiMediaTransmission.v17.lel_payloadCapability = htolel(channel->rtp.video.readFormat);
+	msg->data.StartMultiMediaTransmission.v17.lel_payloadCapability = htolel(sccp_rtp_getReadFormat(videortp));
 	msg->data.StartMultiMediaTransmission.v17.lel_callReference = htolel(channel->callid);
 	msg->data.StartMultiMediaTransmission.v17.lel_payloadType = htolel(payloadType);
 	msg->data.StartMultiMediaTransmission.v17.lel_DSCPValue = htolel(136);
@@ -870,17 +901,19 @@ static void sccp_protocol_sendStartMultiMediaTransmissionV17(constDevicePtr devi
 	//msg->data.StartMultiMediaTransmission.v17.videoParameter.dummy7 = htolel(7);
 	//msg->data.StartMultiMediaTransmission.v17.videoParameter.dummy8 = htolel(8);
 
-	msg->data.StartMultiMediaTransmission.v17.lel_remotePortNumber = htolel(sccp_socket_getPort(&channel->rtp.video.phone_remote));
-	if (channel->rtp.video.phone_remote.ss_family == AF_INET6) {
-		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) &channel->rtp.video.phone_remote;
+	struct sockaddr_storage sas;
+	sccp_rtp_getRemotePhoneAddress(videortp, &sas);
+	if (sas.ss_family == AF_INET6) {
+		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) &sas;
 
 		memcpy(&msg->data.StartMultiMediaTransmission.v17.bel_remoteIpAddr, &in6->sin6_addr, 16);
 		msg->data.StartMultiMediaTransmission.v17.lel_ipv46 = htolel(1);
 	} else {
-		struct sockaddr_in *in = (struct sockaddr_in *) &channel->rtp.video.phone_remote;
+		struct sockaddr_in *in = (struct sockaddr_in *) &sas;
 
 		memcpy(&msg->data.StartMultiMediaTransmission.v17.bel_remoteIpAddr, &in->sin_addr, 4);
 	}
+	msg->data.StartMultiMediaTransmission.v17.lel_remotePortNumber = htolel(sccp_socket_getPort(&sas));
 	sccp_dump_msg(msg);
 	sccp_dev_send(device, msg);
 }
