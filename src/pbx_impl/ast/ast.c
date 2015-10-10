@@ -901,12 +901,12 @@ int sccp_wrapper_asterisk_channel_read(PBX_CHANNEL_TYPE * ast, NEWCONST char *fu
 				}
 
 				if (sccp_strcaseequals(args.type, "audio")) {
-					rtp = c->rtp.audio.rtp;
+					rtp = sccp_channel_getPbxRtp(c, SCCP_RTP_AUDIO);
 				} else if (sccp_strcaseequals(args.type, "video")) {
-					rtp = c->rtp.video.rtp;
+					rtp = sccp_channel_getPbxRtp(c, SCCP_RTP_VIDEO);
 				/*
 				} else if (sccp_strcaseequals(args.type, "text")) {
-					rtp = c->rtp.text.rtp;
+					rtp = sccp_rtp_getPbxRtp(sccp_channel_getRtp(c, SCCP_RTP_TEXT));
 				*/
 				} else {
 					return -1;

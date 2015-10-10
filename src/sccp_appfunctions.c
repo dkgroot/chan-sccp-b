@@ -596,9 +596,11 @@ static int sccp_func_sccpchannel(PBX_CHANNEL_TYPE * chan, NEWCONST char *cmd, ch
 			if (!strcasecmp(token, "callid") || !strcasecmp(token, "id")) {
 				snprintf(buf, buf_len, "%d", c->callid);
 			} else if (!strcasecmp(token, "format")) {
-				snprintf(buf, buf_len, "%d", c->rtp.audio.readFormat);
+				sccp_rtp_new_t *audiortp = sccp_channel_getRtp(c, SCCP_RTP_AUDIO);
+				snprintf(buf, buf_len, "%d", sccp_rtp_getReadFormat(audiortp));
 			} else if (!strcasecmp(token, "codecs")) {
-				sccp_copy_string(buf, codec2name(c->rtp.audio.readFormat), len);
+				sccp_rtp_new_t *audiortp = sccp_channel_getRtp(c, SCCP_RTP_AUDIO);
+				sccp_copy_string(buf, codec2name(sccp_rtp_getReadFormat(audiortp)), len);
 			} else if (!strcasecmp(token, "capability")) {
 				sccp_multiple_codecs2str(buf, buf_len - 1, c->capabilities.audio, ARRAY_LEN(c->capabilities.audio));
 			} else if (!strcasecmp(token, "calledPartyName")) {

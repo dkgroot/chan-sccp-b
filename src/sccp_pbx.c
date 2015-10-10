@@ -531,7 +531,7 @@ int sccp_pbx_answer(sccp_channel_t * channel)
 			}
 		}
 
-		if (c->rtp.video.writeState & SCCP_RTP_STATUS_ACTIVE) {
+		if (sccp_channel_getRtpWriteState(c, SCCP_RTP_VIDEO) & SCCP_RTP_STATUS_ACTIVE) {
 			iPbx.queue_control(c->owner, AST_CONTROL_VIDUPDATE);
 		}
 	}
@@ -665,7 +665,7 @@ uint8_t sccp_pbx_channel_allocate(sccp_channel_t * channel, const void *ids, con
 		pbx_log(LOG_ERROR, "%s: Unable to allocate asterisk channel on line %s\n", l->id, l->name);
 		return 0;
 	}
-       	sccp_channel_updateChannelCapability(c);
+       	//sccp_channel_updateChannelCapability(c);
 	iPbx.set_nativeAudioFormats(c, c->preferences.audio, 1);
 
 	/* can be replaced with c->designator */
