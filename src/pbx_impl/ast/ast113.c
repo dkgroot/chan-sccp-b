@@ -2289,6 +2289,7 @@ static PBX_RTP_TYPE * sccp_wrapper_asterisk113_create_rtpServer(constChannelPtr 
 	}
 
 	return pbxrtp;
+
 }
 
 static PBX_RTP_TYPE * sccp_wrapper_asterisk113_destroy_rtpServer(PBX_RTP_TYPE * rtp)
