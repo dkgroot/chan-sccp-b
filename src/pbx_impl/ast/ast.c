@@ -748,45 +748,44 @@ void sccp_asterisk_connectedline(sccp_channel_t * channel, const void *data, siz
 void sccp_asterisk_sendRedirectedUpdate(const sccp_channel_t * channel, const char *fromNumber, const char *fromName, const char *toNumber, const char *toName, uint8_t reason)
 {
 #if ASTERISK_VERSION_GROUP >106
-	struct ast_party_redirecting *redirecting;
+	struct ast_party_redirecting redirecting;
 	struct ast_set_party_redirecting update_redirecting;
 
-	redirecting = ast_channel_redirecting(channel->owner);
-	//ast_party_redirecting_init(redirecting);
+	ast_party_redirecting_init(&redirecting);
 	memset(&update_redirecting, 0, sizeof(update_redirecting));
 
 	/* update redirecting info line for source part */
 	if (fromNumber) {
 		update_redirecting.from.number = 1;
-		redirecting->from.number.valid = 1;
-		redirecting->from.number.str = strdup(fromNumber);
+		redirecting.from.number.valid = 1;
+		redirecting.from.number.str = strdup(fromNumber);
 	}
 
 	if (fromName) {
 		update_redirecting.from.name = 1;
-		redirecting->from.name.valid = 1;
-		redirecting->from.name.str = strdup(fromName);
+		redirecting.from.name.valid = 1;
+		redirecting.from.name.str = strdup(fromName);
 	}
 
 	if (toNumber) {
 		update_redirecting.to.number = 1;
-		redirecting->to.number.valid = 1;
-		redirecting->to.number.str = strdup(toNumber);
+		redirecting.to.number.valid = 1;
+		redirecting.to.number.str = strdup(toNumber);
 	}
 
 	if (toName) {
 		update_redirecting.to.name = 1;
-		redirecting->to.name.valid = 1;
-		redirecting->to.name.str = strdup(toName);
+		redirecting.to.name.valid = 1;
+		redirecting.to.name.str = strdup(toName);
 	}
 #if ASTERISK_VERSION_GROUP >111
-	redirecting->reason.code = reason;
+	redirecting.reason.code = reason;
 #else
-	redirecting->reason = reason;
+	redirecting.reason = reason;
 #endif
 
-	ast_channel_queue_redirecting_update(channel->owner, redirecting, &update_redirecting);
-	ast_party_redirecting_free(redirecting);
+	ast_channel_queue_redirecting_update(channel->owner, &redirecting, &update_redirecting);
+	ast_party_redirecting_free(&redirecting);
 #else
 	// set redirecting party (forwarder)
 	if (fromNumber) {
