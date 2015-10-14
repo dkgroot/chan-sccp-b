@@ -16,6 +16,8 @@ struct sccp_rtp_new;
 
 struct sccp_rtp_new;
 
+struct sccp_rtp_new;
+
 /*!
  * \brief SCCP RTP Structure
  */
