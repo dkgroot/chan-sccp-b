@@ -673,13 +673,14 @@ static int sccp_wrapper_asterisk113_indicate(PBX_CHANNEL_TYPE * ast, int ind, co
 			sccp_log((DEBUGCAT_PBX | DEBUGCAT_INDICATE)) (VERBOSE_PREFIX_3 "SCCP: Source UPDATE request\n");
 
 			if (c->rtp.audio.rtp) {
-				ast_rtp_instance_change_source(c->rtp.audio.rtp);
+				ast_rtp_instance_update_source(c->rtp.audio.rtp);
 			}
 			res = 0;
 			break;
 
 			/* when the bridged channel hold/unhold the call we are notified here */
 		case AST_CONTROL_HOLD:
+			sccp_channel_stopMediaTransmission(c, TRUE);
 			sccp_asterisk_moh_start(ast, (const char *) data, c->musicclass);
 			res = 0;
 			break;
@@ -687,12 +688,17 @@ static int sccp_wrapper_asterisk113_indicate(PBX_CHANNEL_TYPE * ast, int ind, co
 			sccp_asterisk_moh_stop(ast);
 
 			if (c->rtp.audio.rtp) {
-				ast_rtp_instance_update_source(c->rtp.audio.rtp);
+				ast_rtp_instance_change_source(c->rtp.audio.rtp);
 			}
+			
+			sccp_channel_updateMediaTransmission(c);
 			res = 0;
 			break;
 
 		case AST_CONTROL_CONNECTED_LINE:
+			if (c->state >= SCCP_CHANNELSTATE_DIALING && c->rtp.audio.writeState == SCCP_RTP_STATUS_INACTIVE) {
+				sccp_channel_openReceiveChannel(c);
+			}
 			sccp_asterisk_connectedline(c, data, datalen);
 			res = 0;
 			break;
@@ -754,7 +760,10 @@ static int sccp_wrapper_asterisk113_indicate(PBX_CHANNEL_TYPE * ast, int ind, co
 		case AST_CONTROL_MASQUERADE_NOTIFY:
 			break;
 		case -1:											// Asterisk prod the channel
-			if (c->line && c->state > SCCP_GROUPED_CHANNELSTATE_DIALING) {
+			if (c->line && c->state >= SCCP_CHANNELSTATE_DIALING) {
+				if (c->rtp.audio.writeState == SCCP_RTP_STATUS_INACTIVE) {
+					sccp_channel_openReceiveChannel(c);
+				}
 				uint8_t instance = sccp_device_find_index_for_line(d, c->line->name);
 				sccp_dev_stoptone(d, instance, c->callid);
 			}
@@ -1852,6 +1861,7 @@ static int sccp_wrapper_asterisk113_update_rtp_peer(PBX_CHANNEL_TYPE * ast, PBX_
 		}
 
 		PBX_RTP_TYPE *instance = { 0, };
+		sccp_rtp_t *phone_rtp = NULL;
 		struct sockaddr_storage sas = { 0, };
 		//struct sockaddr_in sin = { 0, };
 		struct ast_sockaddr sin_tmp;
@@ -1859,24 +1869,16 @@ static int sccp_wrapper_asterisk113_update_rtp_peer(PBX_CHANNEL_TYPE * ast, PBX_
 
 		if (rtp) {											// generalize input
 			instance = rtp;
+			phone_rtp = &c->rtp.audio;
 		} else if (vrtp) {
 			instance = vrtp;
-#ifdef CS_SCCP_VIDEO			
-			/* video requested by remote side, let's see if we support video */ 
- 			/* should be moved to sccp_rtp.c */
-/*
-			if (ast_format_cap_has_type(codecs, AST_MEDIA_TYPE_VIDEO) && sccp_device_isVideoSupported(d) && c->videomode == SCCP_VIDEO_MODE_AUTO) {
-				if (!c->rtp.video.rtp && !sccp_rtp_createVideoServer(c)) {
-					sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: can not start vrtp\n", DEV_ID_LOG(d));
-				} else {
-					if (!c->rtp.video.readState) {
-						sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: video rtp started\n", DEV_ID_LOG(d));
-						sccp_channel_startMultiMediaTransmission(c);
-					}
-				}
+			phone_rtp = &c->rtp.video;
+#if defined(CS_SCCP_VIDEO) && defined(CS_EXPERIMENTAL)								// late check for video compatibility, should be moved to seperate function
+			if (ast_format_cap_has_type(codecs, AST_MEDIA_TYPE_VIDEO) && phone_rtp->rtp && sccp_device_isVideoSupported(d) && c->videomode != SCCP_VIDEO_MODE_OFF && c->rtp.video.writeState == SCCP_RTP_STATUS_INACTIVE) {
+				sccp_channel_openMultiMediaReceiveChannel(c);
+				sccp_channel_startMultiMediaTransmission(c);
 			}
-*/
-#endif			
+#endif
 		} else {
 			instance = trtp;
 		}
@@ -1884,7 +1886,6 @@ static int sccp_wrapper_asterisk113_update_rtp_peer(PBX_CHANNEL_TYPE * ast, PBX_
 		if (d->directrtp && d->nat < SCCP_NAT_ON && !nat_active && !c->conference) {			// asume directrtp
 			ast_rtp_instance_get_remote_address(instance, &sin_tmp);
 			memcpy(&sas, &sin_tmp, sizeof(struct sockaddr_storage));
-			//ast_sockaddr_to_sin(&sin_tmp, &sin);
 			if (d->nat == SCCP_NAT_OFF) {								// forced nat off to circumvent autodetection + direcrtp, requires checking both phone_ip and external session ip address against devices permit/deny
 				struct ast_sockaddr sin_local;
 				struct sockaddr_storage localsas = { 0, };
@@ -1904,20 +1905,22 @@ static int sccp_wrapper_asterisk113_update_rtp_peer(PBX_CHANNEL_TYPE * ast, PBX_
 			sccp_session_getOurIP(d->session, &sas, sccp_socket_is_IPv4(&sas) ? AF_INET : AF_INET6);
 		}
 
-		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_1 "%s: (asterisk113_update_rtp_peer) new remote rtp ip = '%s'\n (d->directrtp: %s && !d->nat: %s && !remote->nat_active: %s && d->acl_allow: %s) => directmedia=%s\n", c->currentDeviceId, sccp_socket_stringify(&sas), S_COR(d->directrtp, "yes", "no"),
-					  sccp_nat2str(d->nat),
-					  S_COR(!nat_active, "yes", "no"), S_COR(directmedia, "yes", "no"), S_COR(directmedia, "yes", "no")
-		    );
+		if (!sccp_socket_equals(&sas, &phone_rtp->phone_remote) || phone_rtp->readState == SCCP_RTP_STATUS_INACTIVE || c->state == SCCP_CHANNELSTATE_HOLD) {
+			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_1 "%s: (asterisk113_update_rtp_peer) new remote rtp ip = '%s'\n (d->directrtp: %s && !d->nat: %s && !remote->nat_active: %s && d->acl_allow: %s) => directmedia=%s\n", c->currentDeviceId, sccp_socket_stringify(&sas), S_COR(d->directrtp, "yes", "no"),
+						  sccp_nat2str(d->nat),
+						  S_COR(!nat_active, "yes", "no"), S_COR(directmedia, "yes", "no"), S_COR(directmedia, "yes", "no")
+			    );
 
-		if (rtp) {											// send peer info to phone
-			sccp_rtp_set_peer(c, &c->rtp.audio, &sas);
-			c->rtp.audio.directMedia = directmedia;
-		} else if (vrtp) {
-			sccp_rtp_set_peer(c, &c->rtp.video, &sas);
-			c->rtp.audio.directMedia = directmedia;
+			if (rtp || vrtp) {									// send peer info to phone
+				sccp_rtp_set_peer(c, phone_rtp, &sas);
+				phone_rtp->directMedia = directmedia;
+			} else {
+				//sccp_rtp_set_peer(c, &c->rtp.text, &sas);
+				//c->rtp.text.directMedia = directmedia;
+			}
 		} else {
-			//sccp_rtp_set_peer(c, &c->rtp.text, &sas);
-			//c->rtp.audio.directMedia = directmedia;
+			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_2 "%s: (asterisk113_update_rtp_peer) nothing changed, skipping\n", c->currentDeviceId);
+			result = 0;
 		}
 	} while (0);
 

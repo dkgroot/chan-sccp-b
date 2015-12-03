@@ -1272,6 +1272,9 @@ void *sccp_pbx_softswitch(sccp_channel_t * channel)
 				sccp_log((DEBUGCAT_PBX)) (VERBOSE_PREFIX_3 "%s: (sccp_pbx_softswitch) Dial Extension %s\n", d->id, shortenedNumber);
 				//sccp_channel_set_calledparty(c, NULL, shortenedNumber);
 				//sccp_channel_set_calledparty(c, "", c->dialedNumber);
+				if (c->rtp.audio.rtp || sccp_rtp_createAudioServer(d, c)) {
+					sccp_rtp_requestRTPPorts(d, c);
+				}
 				sccp_indicate(d, c, SCCP_CHANNELSTATE_DIALING);
 				/* fall through */
 		}

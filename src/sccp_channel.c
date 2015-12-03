@@ -657,14 +657,13 @@ void sccp_channel_openReceiveChannel(constChannelPtr channel)
 	/* create the rtp stuff. It must be create before setting the channel AST_STATE_UP. otherwise no audio will be played */
 	sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: Ask the device to open a RTP port on channel %d. Codec: %s, echocancel: %s\n", d->id, channel->callid, codec2str(channel->rtp.audio.writeFormat), channel->line->echocancel ? "ON" : "OFF");
 
+	/*! \note should already have been started by PortRequest */
 	if (!channel->rtp.audio.rtp && !sccp_rtp_createAudioServer(d, channel)) {
 		pbx_log(LOG_WARNING, "%s: Error opening RTP for channel %s-%08X\n", DEV_ID_LOG(d), channel->line->name, channel->callid);
 
 		instance = sccp_device_find_index_for_line(d, channel->line->name);
 		sccp_dev_starttone(d, SKINNY_TONE_REORDERTONE, instance, channel->callid, 0);
 		return;
-	} else {
-		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: Started RTP on channel %s-%08X\n", DEV_ID_LOG(d), channel->line->name, channel->callid);
 	}
 
 	sccp_rtp_t *audio = (sccp_rtp_t *) &(channel->rtp.audio);
@@ -681,17 +680,6 @@ void sccp_channel_openReceiveChannel(constChannelPtr channel)
 	}
 		
 	d->protocol->sendOpenReceiveChannel(d, channel);
-#ifdef CS_SCCP_VIDEO
-	if (sccp_device_isVideoSupported(d) && channel->videomode == SCCP_VIDEO_MODE_AUTO) {
-		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: We can have video, try to start vrtp\n", DEV_ID_LOG(d));
-		if (!channel->rtp.video.rtp && !sccp_rtp_createVideoServer(d, channel)) {
-			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: can not start vrtp\n", DEV_ID_LOG(d));
-		} else {
-			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: video rtp started\n", DEV_ID_LOG(d));
-			sccp_channel_startMultiMediaTransmission(channel);
-		}
-	}
-#endif
 }
 
 /*!
@@ -725,6 +713,7 @@ void sccp_channel_closeReceiveChannel(constChannelPtr channel, boolean_t KeepPor
 		msg->data.CloseReceiveChannel.lel_portHandlingFlag = htolel(KeepPortOpen);
 		sccp_dev_send(d, msg);
 		audio->writeState = SCCP_RTP_STATUS_INACTIVE;
+		d->protocol->sendPortClose(d, channel, SKINNY_MEDIA_TYPE_AUDIO);
 	}
 }
 
@@ -813,6 +802,7 @@ void sccp_channel_closeMultiMediaReceiveChannel(constChannelPtr channel, boolean
 		msg->data.CloseMultiMediaReceiveChannel.lel_portHandlingFlag = htolel(KeepPortOpen);
 		sccp_dev_send(d, msg);
 		video->writeState = SCCP_RTP_STATUS_INACTIVE;
+		d->protocol->sendPortClose(d, channel, SKINNY_MEDIA_TYPE_MAIN_VIDEO);
 	}
 }
 
@@ -1365,6 +1355,11 @@ void sccp_channel_answer(const sccp_device_t * device, sccp_channel_t * channel)
 		pbx_log(LOG_ERROR, "SCCP: Channel %d has no device\n", (channel ? channel->callid : 0));
 		return;
 	}
+
+	if (channel->rtp.audio.rtp || sccp_rtp_createAudioServer(device, channel)) {
+		sccp_rtp_requestRTPPorts(device, channel);
+	}
+
 	AUTO_RELEASE sccp_line_t *l = sccp_line_retain(channel->line);
 
 	channel->subscribers = 1;
@@ -1723,8 +1718,8 @@ int sccp_channel_resume(constDevicePtr device, channelPtr channel, boolean_t swa
 
 	//! \todo move this to openreceive- and startmediatransmission
 	sccp_channel_updateChannelCapability(channel);
-
 	channel->state = SCCP_CHANNELSTATE_HOLD;
+	
 #ifdef CS_AST_CONTROL_SRCUPDATE
 	iPbx.queue_control(channel->owner, AST_CONTROL_SRCUPDATE);						// notify changes e.g codec
 #endif
@@ -1733,6 +1728,7 @@ int sccp_channel_resume(constDevicePtr device, channelPtr channel, boolean_t swa
 	} else {
 		sccp_indicate(d, channel, SCCP_CHANNELSTATE_CONNECTED);						// this will also reopen the RTP stream
 	}
+	sccp_channel_startMediaTransmission(channel);
 
 #ifdef CS_MANAGER_EVENTS
 	if (GLOB(callevents)) {

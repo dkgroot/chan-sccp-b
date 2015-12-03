@@ -584,6 +584,7 @@ static int sccp_wrapper_asterisk16_indicate(PBX_CHANNEL_TYPE * ast, int ind, con
 
 			/* when the bridged channel hold/unhold the call we are notified here */
 		case AST_CONTROL_HOLD:
+			sccp_channel_stopMediaTransmission(c, TRUE);
 			sccp_asterisk_moh_start(ast, (const char *) data, c->musicclass);
 			res = 0;
 			break;
@@ -592,6 +593,7 @@ static int sccp_wrapper_asterisk16_indicate(PBX_CHANNEL_TYPE * ast, int ind, con
 			if (c->rtp.audio.rtp) {
 				ast_rtp_new_source(c->rtp.audio.rtp);
 			}
+			sccp_channel_updateMediaTransmission(c);
 			res = 0;
 			break;
 
@@ -626,7 +628,10 @@ static int sccp_wrapper_asterisk16_indicate(PBX_CHANNEL_TYPE * ast, int ind, con
 			break;
 #endif
 		case -1:											// Asterisk prod the channel
-			if (c->line && c->state > SCCP_GROUPED_CHANNELSTATE_DIALING) {
+			if (c->line && c->state >= SCCP_CHANNELSTATE_DIALING) {
+				if (c->rtp.audio.writeState == SCCP_RTP_STATUS_INACTIVE) {
+				      sccp_channel_openReceiveChannel(c);
+				}
 				uint8_t instance = sccp_device_find_index_for_line(d, c->line->name);
 				sccp_dev_stoptone(d, instance, c->callid);
 			}
@@ -1828,14 +1833,17 @@ static int sccp_wrapper_asterisk16_update_rtp_peer(PBX_CHANNEL_TYPE * ast, PBX_R
 			break;
 		}
 		PBX_RTP_TYPE *instance = { 0, };
+		sccp_rtp_t *phone_rtp = NULL;
 		struct sockaddr_storage sas = { 0, };
 		struct sockaddr_in sin = { 0, };
 		boolean_t directmedia = FALSE;
 
 		if (rtp) {											// generalize input
 			instance = rtp;
+			phone_rtp = &c->rtp.audio;
 		} else if (vrtp) {
 			instance = vrtp;
+			phone_rtp = &c->rtp.video;
 		} else {
 			instance = trtp;
 		}
@@ -1852,7 +1860,7 @@ static int sccp_wrapper_asterisk16_update_rtp_peer(PBX_CHANNEL_TYPE * ast, PBX_R
 					directmedia = TRUE;
 				}
 			} else if (sccp_apply_ha(d->ha, &sas) == AST_SENSE_ALLOW) {					// check remote sin against local device acl (to match netmask)
-					directmedia = TRUE;
+				directmedia = TRUE;
 			}
 		}
 		if (!directmedia) {										// fallback to indirectrtp
@@ -1867,15 +1875,9 @@ static int sccp_wrapper_asterisk16_update_rtp_peer(PBX_CHANNEL_TYPE * ast, PBX_R
 					  S_COR(!nat_active, "yes", "no"), S_COR(directmedia, "yes", "no"), S_COR(directmedia, "yes", "no")
 		    );
 
-		if (rtp) {											// send peer info to phone
-			sccp_rtp_set_peer(c, &c->rtp.audio, &sas);
-			c->rtp.audio.directMedia = directmedia;
-		} else if (vrtp) {
-			sccp_rtp_set_peer(c, &c->rtp.video, &sas);
-			c->rtp.audio.directMedia = directmedia;
-			//} else {
-			//sccp_rtp_set_peer(c, &c->rtp.text, &sas);
-			//c->rtp.audio.directMedia = directmedia;
+		if (rtp || vrtp) {											// send peer info to phone
+			sccp_rtp_set_peer(c, phone_rtp, &sas);
+			phone_rtp->directMedia = directmedia;
 		}
 	} while (0);
 

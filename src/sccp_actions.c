@@ -2868,15 +2868,6 @@ void sccp_handle_port_response(constSessionPtr s, devicePtr d, constMessagePtr m
 		}
 		
 		if (channel && !sccp_socket_equals(&sas, &rtp->phone_remote)) {
-			if (d->nat >= SCCP_NAT_ON) {
-				/* Rewrite ip-addres to the outside source address using the phones connection (device->sin) */
-				uint16_t port = sccp_socket_getPort(&sas);
-				sccp_session_getSas(s, &sas);
-				
-				sccp_socket_ipv4_mapped(&sas, &sas);
-				sccp_socket_setPort(&sas, port);
-
-			}
 			sccp_rtp_set_phone(channel, rtp, &sas);
 			//rtp->writeState = SCCP_RTP_STATUS_PORTSET;
 		}
@@ -2923,7 +2914,7 @@ void sccp_handle_open_receive_channel_ack(constSessionPtr s, devicePtr d, constM
 	}
 	if (channel && channel->state != SCCP_CHANNELSTATE_ONHOOK) {
 		if (channel->state == SCCP_CHANNELSTATE_INVALIDNUMBER) {
-			pbx_log(LOG_WARNING, "%s: (OpenReceiveChannelAck) Invalid Number (%d)\n", DEV_ID_LOG(d), channel->state);
+			pbx_log(LOG_WARNING, "%s: (OpenReceiveChannelAck) Invalid Number\n", DEV_ID_LOG(d));
 			return;
 		}
 		if (channel->state == SCCP_CHANNELSTATE_DOWN) {
@@ -2938,29 +2929,17 @@ void sccp_handle_open_receive_channel_ack(constSessionPtr s, devicePtr d, constM
 			return;
 		}
 
-		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: Starting Phone RTP/UDP Transmission (State: %s[%d])\n", d->id, sccp_channelstate2str(channel->state), channel->state);
 		sccp_channel_setDevice(channel, d);
 		if (channel->rtp.audio.rtp) {
-			if (d->nat >= SCCP_NAT_ON) {
-				/* Rewrite ip-addres to the outside source address using the phones connection (device->sin) */
-				uint16_t port = sccp_socket_getPort(&sas);
-				sccp_session_getSas(s, &sas);
-				
-				sccp_socket_ipv4_mapped(&sas, &sas);
-				sccp_socket_setPort(&sas, port);
-
+			if (!sccp_socket_equals(&sas, &channel->rtp.audio.phone_remote)) {
+				sccp_rtp_set_phone(channel, &channel->rtp.audio, &sas);
 			}
-			sccp_rtp_set_phone(channel, &channel->rtp.audio, &sas);
-			sccp_channel_updateMediaTransmission(channel);
 
 			/* update status */
 			channel->rtp.audio.writeState = SCCP_RTP_STATUS_ACTIVE;
 			/* indicate up state only if both transmit and receive is done - this should fix the 1sek delay -MC */
 			if (channel->calltype == SKINNY_CALLTYPE_INBOUND) {
 				iPbx.queue_control(channel->owner, AST_CONTROL_ANSWER);
-			}
-			if ((channel->state == SCCP_CHANNELSTATE_CONNECTED || channel->state == SCCP_CHANNELSTATE_CONNECTEDCONFERENCE) && ((channel->rtp.audio.writeState & SCCP_RTP_STATUS_ACTIVE) && (channel->rtp.audio.readState & SCCP_RTP_STATUS_ACTIVE))) {
-				iPbx.set_callstate(channel, AST_STATE_UP);
 			}
 		} else {
 			pbx_log(LOG_ERROR, "%s: (OpenReceiveChannelAck) Can't set the RTP media address to %s, no asterisk rtp channel!\n", d->id, sccp_socket_stringify(&sas));
@@ -3019,24 +2998,16 @@ void sccp_handle_OpenMultiMediaReceiveAck(constSessionPtr s, devicePtr d, constM
 
 		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: Starting device rtp transmission with state %s(%d)\n", d->id, sccp_channelstate2str(channel->state), channel->state);
 		if (channel->rtp.video.rtp || sccp_rtp_createVideoServer(d, channel)) {
-			if (d->nat >= SCCP_NAT_ON) {
-				uint16_t port = sccp_socket_getPort(&sas);
-				sccp_session_getSas(s, &sas);
-				sccp_socket_ipv4_mapped(&sas, &sas);
-				sccp_socket_setPort(&sas, port);
-			}
-
+#ifdef CS_SCCP_VIDEO
 			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: Set the RTP media address to %s\n", d->id, sccp_socket_stringify(&sas));
-			sccp_rtp_set_phone(channel, &channel->rtp.video, &sas);
+			if (channel->rtp.video.rtp || sccp_rtp_createVideoServer(d, channel)) {			
+				sccp_rtp_set_phone(channel, &channel->rtp.video, &sas);
+			}
+			
 			channel->rtp.video.writeState = SCCP_RTP_STATUS_ACTIVE;
-
-			if (channel->calltype == SKINNY_CALLTYPE_INBOUND) {
-				iPbx.queue_control(channel->owner, AST_CONTROL_ANSWER);
-			}
-			if ((channel->state == SCCP_CHANNELSTATE_CONNECTED || channel->state == SCCP_CHANNELSTATE_CONNECTEDCONFERENCE) && ((channel->rtp.audio.writeState & SCCP_RTP_STATUS_ACTIVE) && (channel->rtp.audio.readState & SCCP_RTP_STATUS_ACTIVE))) {
-				iPbx.set_callstate(channel, AST_STATE_UP);
-			}
-		} else {
+		} else 
+#endif
+		{
 			pbx_log(LOG_ERROR, "%s: Can't set the RTP media address to %s, no asterisk rtp channel!\n", d->id, addrStr);
 		}
 
@@ -3059,6 +3030,7 @@ void sccp_handle_OpenMultiMediaReceiveAck(constSessionPtr s, devicePtr d, constM
 		iPbx.queue_control(channel->owner, AST_CONTROL_VIDUPDATE);
 	} else {
 		pbx_log(LOG_ERROR, "%s: No channel with this PassThruId %u!\n", d->id, partyID);
+		sccp_channel_closeMultiMediaReceiveChannel(channel, FALSE);
 	}
 }
 
