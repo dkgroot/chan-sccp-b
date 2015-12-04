@@ -2997,8 +2997,8 @@ void sccp_handle_OpenMultiMediaReceiveAck(constSessionPtr s, devicePtr d, constM
 		}
 
 		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: Starting device rtp transmission with state %s(%d)\n", d->id, sccp_channelstate2str(channel->state), channel->state);
-		if (channel->rtp.video.rtp || sccp_rtp_createVideoServer(d, channel)) {
 #ifdef CS_SCCP_VIDEO
+		if (channel->rtp.video.rtp || sccp_rtp_createVideoServer(d, channel)) {
 			sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "%s: Set the RTP media address to %s\n", d->id, sccp_socket_stringify(&sas));
 			if (channel->rtp.video.rtp || sccp_rtp_createVideoServer(d, channel)) {			
 				sccp_rtp_set_phone(channel, &channel->rtp.video, &sas);
