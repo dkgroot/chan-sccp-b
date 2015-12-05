@@ -98,86 +98,81 @@
 SCCP_FILE_VERSION(__FILE__, "$Revision$");
 
 /*!
- * \brief create a new rtp server for audio data
- * \param c SCCP Channel
+ * \brief create a new rtp server
+ * \todo refactor iPbx.rtp_???_server to include sccp_rtp_type_t
+ * \todo refactor calling function to call this function directly instead of sccp_rtp_createAudioServer / sccp_rtp_createVideoServer
  */
-int sccp_rtp_createAudioServer(constDevicePtr d, constChannelPtr c)
+static int __sccp_rtp_createRTPServer(constDevicePtr d, constChannelPtr channel, sccp_rtp_type_t type)
 {
 	boolean_t rtpResult = FALSE;
-	boolean_t isMappedIPv4;
-
-	if (!c) {
+	if (!channel || !d) {
 		return FALSE;
 	}
-	if (c->rtp.audio.rtp) {
+	if (channel->rtp.audio.rtp) {
 		sccp_log((DEBUGCAT_RTP)) (VERBOSE_PREFIX_3 "we already have a rtp server, we use this one\n");
 		return TRUE;
 	}
+	
+	sccp_channel_t *c = (sccp_channel_t *) channel;									// discarding const
+	
 
-	if (iPbx.rtp_audio_create) {
-		rtpResult = (boolean_t) iPbx.rtp_audio_create(d, (sccp_channel_t *) c); 		/* discarding const !! */
+	boolean_t(*rtp_create) (constDevicePtr device, sccp_channel_t * channel) = NULL;
+	sccp_rtp_t *rtp = NULL;
+	switch(type) {
+		case SCCP_RTP_AUDIO:
+			rtp = &(c->rtp.audio);
+			rtp_create = iPbx.rtp_audio_create;
+			break;
+		case SCCP_RTP_VIDEO:
+			rtp = &(c->rtp.video);
+			rtp_create = iPbx.rtp_video_create;
+			break;
+		case SCCP_RTP_TEXT:
+		case SCCP_RTP_TYPE_SENTINEL:
+			pbx_log(LOG_ERROR, "%s: (sccp_rtp_createRTPServer) unknown/unhandled rtp type, cancelling\n", c->designator);
+			return FALSE;
+	}
+	if (rtp_create) {
+		rtpResult = rtp_create(d, c);
 	} else {
 		pbx_log(LOG_ERROR, "we should start our own rtp server, but we don't have one\n");
 		return FALSE;
 	}
+	struct sockaddr_storage *phone_remote = &rtp->phone_remote;
 
-	sccp_rtp_t *rtp = (sccp_rtp_t *) &(c->rtp.audio);
-	struct sockaddr_storage new_peer = {0};
-
-	if (!sccp_rtp_getUs(rtp, &new_peer)) {
+	if (!sccp_rtp_getUs(rtp, phone_remote)) {
 		pbx_log(LOG_WARNING, "%s: Did not get our rtp part\n", c->currentDeviceId);
 		return FALSE;
 	}
-	sccp_session_getOurIP(d->session, &new_peer, sccp_socket_is_IPv4(&new_peer) ? AF_INET : AF_INET6);
-	memcpy(&rtp->phone_remote, &new_peer, sizeof(rtp->phone_remote));
+
+	uint16_t port = sccp_rtp_getServerPort(rtp);
+	sccp_session_getOurIP(d->session, phone_remote, 0);
+	sccp_socket_setPort(phone_remote, port);
 
 	char buf[NI_MAXHOST + NI_MAXSERV];
-	sccp_copy_string(buf, sccp_socket_stringify(&rtp->phone_remote), sizeof(buf));
-	isMappedIPv4 = sccp_socket_ipv4_mapped(&new_peer, (struct sockaddr_storage *) &new_peer);
-	sccp_log(DEBUGCAT_RTP) (VERBOSE_PREFIX_3 "%s: (createAudioServer) updated phone rtp destination to:%s, family:%s, mapped: %s\n", c->designator, buf, sccp_socket_is_IPv4(&new_peer) ? "IPv4" : "IPv6", isMappedIPv4 ? "True" : "False");
+	sccp_copy_string(buf, sccp_socket_stringify(phone_remote), sizeof(buf));
+	boolean_t isMappedIPv4 = sccp_socket_ipv4_mapped(phone_remote, (struct sockaddr_storage *) phone_remote);
+	sccp_log(DEBUGCAT_RTP) (VERBOSE_PREFIX_3 "%s: (createAudioServer) updated phone %s destination to : %s, family:%s, mapped: %s\n", c->designator, sccp_rtp_type2str(type), buf, sccp_socket_is_IPv4(phone_remote) ? "IPv4" : "IPv6", isMappedIPv4 ? "True" : "False");
 
 	return rtpResult;
 }
 
+
+/*!
+ * \brief create a new rtp server for audio data
+ */
+int sccp_rtp_createAudioServer(constDevicePtr d, constChannelPtr c)
+{
+	return __sccp_rtp_createRTPServer(d, c, SCCP_RTP_AUDIO);
+}
+
 /*!
  * \brief create a new rtp server for video data
- * \param c SCCP Channel
  */
 #ifdef CS_SCCP_VIDEO
 int sccp_rtp_createVideoServer(constDevicePtr d, constChannelPtr c)
 {
-	boolean_t rtpResult = FALSE;
-	boolean_t isMappedIPv4;
-
-	if (!c) {
-		return FALSE;
-	}
-	if (c->rtp.video.rtp) {
-		pbx_log(LOG_ERROR, "we already have a rtp server, why don't we use this?\n");
-		return TRUE;
-	}
-
-	if (iPbx.rtp_video_create) {
-		rtpResult = (boolean_t) iPbx.rtp_video_create(d, (sccp_channel_t *) c);			/* discarding const !! */
-	} else {
-		pbx_log(LOG_ERROR, "we should start our own rtp server, but we don't have one\n");
-	}
-	sccp_rtp_t *rtp = (sccp_rtp_t *) &(c->rtp.video);
-	struct sockaddr_storage new_peer = {0};
-
-	if (!sccp_rtp_getUs(rtp, &new_peer)) {
-		pbx_log(LOG_WARNING, "%s: Did not get our rtp part\n", c->currentDeviceId);
-		return FALSE;
-	}
-	sccp_session_getOurIP(d->session, &new_peer, sccp_socket_is_IPv4(&new_peer) ? AF_INET : AF_INET6);
-	memcpy(&rtp->phone_remote, &new_peer, sizeof(rtp->phone_remote));
-
-	char buf[NI_MAXHOST + NI_MAXSERV];
-	sccp_copy_string(buf, sccp_socket_stringify(&rtp->phone_remote), sizeof(buf));
-	isMappedIPv4 = sccp_socket_ipv4_mapped(&new_peer, (struct sockaddr_storage *) &new_peer);
-	sccp_log(DEBUGCAT_RTP) (VERBOSE_PREFIX_3 "%s: (createVideoServer) updated phone vrtp destination to:%s, family:%s, mapped: %s\n", c->designator, buf, sccp_socket_is_IPv4(&new_peer) ? "IPv4" : "IPv6", isMappedIPv4 ? "True" : "False");
-
-	return rtpResult;
+	return	__sccp_rtp_createRTPServer(d, c, SCCP_RTP_VIDEO);
 }
 #endif
 
