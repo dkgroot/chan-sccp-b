@@ -15,7 +15,7 @@ env:
 matrix:
   allow_failures:
     - compiler: gcc
-    - env: REPOS=trusty13
+      env: REPOS=trusty13
 
 # Install Required Devel Packages
 before_install:
