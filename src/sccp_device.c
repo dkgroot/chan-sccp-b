@@ -428,16 +428,18 @@ const sccp_accessorystate_t sccp_device_getAccessoryStatus(constDevicePtr d, con
 
 const sccp_accessory_t sccp_device_getActiveAccessory(constDevicePtr d)
 {
+	sccp_accessory_t res = SCCP_ACCESSORY_NONE;
 	pbx_assert(d != NULL && d->privateData != NULL);
 	sccp_accessory_t accessory = SCCP_ACCESSORY_NONE;
 	sccp_private_lock(d->privateData);
 	for (accessory = SCCP_ACCESSORY_NONE ; accessory < SCCP_ACCESSORY_SENTINEL; accessory++) {
 		if (d->privateData->accessoryStatus[accessory] == SCCP_ACCESSORYSTATE_OFFHOOK) {
+			res = accessory;
 			break;
 		}
 	}
 	sccp_private_unlock(d->privateData);
-	return accessory;
+	return res;
 }
 
 int sccp_device_setAccessoryStatus(constDevicePtr d, const sccp_accessory_t accessory, const sccp_accessorystate_t state)
@@ -504,9 +506,13 @@ const skinny_registrationstate_t sccp_device_getRegistrationState(constDevicePtr
 
 int sccp_device_setRegistrationState(constDevicePtr d, const skinny_registrationstate_t state)
 {
-	pbx_assert(d != NULL && d->privateData != NULL);
-	int changed = 0;
+	pbx_assert(d != NULL);
+	if (isPointerDead(d) || !d->privateData) {
+		return 0;;
+	}
 
+	int changed = 0;
+	
 	sccp_private_lock(d->privateData);
 	if (state != d->privateData->registrationState) {
 		d->privateData->registrationState = state;
