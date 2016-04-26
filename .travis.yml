@@ -1,6 +1,5 @@
 language: c
 
-# Setup Build Matrix
 compiler: 
  - clang
  - gcc
@@ -10,7 +9,6 @@ env:
  - REPOS=trusty13
  - REPOS=utopic
 
-# Install Required Devel Packages
 before_install:
  - if [ "${REPOS}" != "trusty13" ]; 
    then
